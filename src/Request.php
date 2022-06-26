@@ -117,10 +117,9 @@ class Request implements RequestInterface
 	public function handle() : void {
 		if (isset($this->route)) {
 			$this->route->handle($this);
+			return;
 		}
-		else {
-			throw new RouteNotFoundException($this);
-		}
+		throw new RouteNotFoundException($this);
 	}
 
 	public function __get($name) {
