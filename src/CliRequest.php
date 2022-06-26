@@ -6,9 +6,10 @@
 namespace Lsr\Core\Requests;
 
 use Lsr\Core\Routing\CliRoute;
-use App\Services\CliHelper;
-use Lsr\Core\Requests\Interfaces\RequestInterface;
-use Lsr\Core\Routing\Interfaces\RouteInterface;
+use Lsr\Enums\RequestMethod;
+use Lsr\Helpers\Cli\CliHelper;
+use Lsr\Interfaces\RequestInterface;
+use Lsr\Interfaces\RouteInterface;
 use Nette\Utils\Helpers;
 
 class CliRequest implements RequestInterface
@@ -16,13 +17,13 @@ class CliRequest implements RequestInterface
 
 	// TODO: Parse additional cli args and opts
 
-	public string       $type    = RouteInterface::CLI;
-	public array        $path    = [];
-	public array        $args    = [];
-	public array        $params  = [];
-	public array        $errors  = [];
-	public array        $notices = [];
-	protected ?CliRoute $route   = null;
+	public RequestMethod $type    = RequestMethod::CLI;
+	public array         $path    = [];
+	public array         $args    = [];
+	public array         $params  = [];
+	public array         $errors  = [];
+	public array         $notices = [];
+	protected ?CliRoute  $route   = null;
 
 	public function __construct(array|string $query) {
 		global $argv;
@@ -53,6 +54,13 @@ class CliRequest implements RequestInterface
 		}));
 	}
 
+	/**
+	 * @return CliRoute|null
+	 */
+	public function getRoute() : ?CliRoute {
+		return $this->route;
+	}
+
 	public function handle() : void {
 		if (isset($this->route)) {
 			$this->route->handle($this);
@@ -79,17 +87,17 @@ class CliRequest implements RequestInterface
 	}
 
 	/**
-	 * @return CliRoute|null
-	 */
-	public function getRoute() : ?CliRoute {
-		return $this->route;
-	}
-
-	/**
 	 * @inheritDoc
 	 */
 	public function jsonSerialize() : array {
 		return get_object_vars($this);
 	}
 
+	public function getPath() : array {
+		return $this->path;
+	}
+
+	public function getMethod() : RequestMethod {
+		return $this->type;
+	}
 }
