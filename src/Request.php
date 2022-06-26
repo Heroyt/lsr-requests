@@ -7,6 +7,7 @@ namespace Lsr\Core\Requests;
 
 
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
+use Lsr\Core\Router;
 use Lsr\Core\Routing\Route;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
@@ -42,7 +43,7 @@ class Request implements RequestInterface
 		$this->query = array_filter($_GET, static function($key) {
 			return $key !== 'p';
 		},                          ARRAY_FILTER_USE_KEY);
-		$this->route = Route::getRoute($this->type, $this->path, $this->params);
+		$this->route = Router::getRoute($this->type, $this->path, $this->params);
 		if (isset($_SESSION['fromRequest'])) {
 			$this->previousRequest = unserialize($_SESSION['fromRequest'], [__CLASS__]);
 			unset($_SESSION['fromRequest']);

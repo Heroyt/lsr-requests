@@ -5,11 +5,11 @@
 
 namespace Lsr\Core\Requests;
 
+use Lsr\Core\Router;
 use Lsr\Core\Routing\CliRoute;
 use Lsr\Enums\RequestMethod;
 use Lsr\Helpers\Cli\CliHelper;
 use Lsr\Interfaces\RequestInterface;
-use Lsr\Interfaces\RouteInterface;
 use Nette\Utils\Helpers;
 
 class CliRequest implements RequestInterface
@@ -40,7 +40,7 @@ class CliRequest implements RequestInterface
 			exit(1);
 		}
 
-		$this->route = CliRoute::getRoute(RouteInterface::CLI, $this->path, $this->params);
+		$this->route = Router::getRoute(RequestMethod::CLI, $this->path, $this->params);
 		$this->args = array_slice($argv, 2);
 	}
 
