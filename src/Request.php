@@ -77,6 +77,7 @@ class Request implements RequestInterface
 
 	protected function parseArrayQuery(array $query) : void {
 		$this->path = array_map('strtolower', $query);
+		array_unshift($this->path, '/');
 	}
 
 	protected function parseStringQuery(string $query) : void {
