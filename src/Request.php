@@ -151,8 +151,8 @@ class Request implements RequestInterface
 	 */
 	public function jsonSerialize() : array {
 		$vars = get_object_vars($this);
-		if (isset($this->route) && !empty($this->route->getRouteName())) {
-			$vars['routeName'] = $this->route->getRouteName();
+		if (isset($this->route) && !empty($this->route->getName())) {
+			$vars['routeName'] = $this->route->getName();
 		}
 		return $vars;
 	}
