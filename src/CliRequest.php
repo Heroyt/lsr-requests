@@ -5,8 +5,8 @@
 
 namespace Lsr\Core\Requests;
 
-use Lsr\Core\Router;
 use Lsr\Core\Routing\CliRoute;
+use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Helpers\Cli\CliHelper;
 use Lsr\Interfaces\RequestInterface;

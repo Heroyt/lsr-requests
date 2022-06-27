@@ -7,8 +7,8 @@ namespace Lsr\Core\Requests;
 
 
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
-use Lsr\Core\Router;
 use Lsr\Core\Routing\Route;
+use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
