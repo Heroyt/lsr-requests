@@ -18,22 +18,44 @@ class Request implements RequestInterface
 
 	public RequestMethod $type            = RequestMethod::GET;
 	public array         $path            = [];
-	public array         $query           = [];
-	public array         $params          = [];
-	public string        $body            = '';
-	public array         $put             = [];
-	public array         $post            = [];
-	public array         $get             = [];
-	public array         $request         = [];
-	public array         $errors          = [];
-	public array         $notices         = [];
-	public array         $passErrors      = [];
-	public array         $passNotices     = [];
-	public ?Request      $previousRequest = null;
-	protected ?Route     $route           = null;
+	public array     $query           = [];
+	public array     $params          = [];
+	public string    $body            = '';
+	public array     $put             = [];
+	public array     $post            = [];
+	public array     $get             = [];
+	public array     $request         = [];
+	public array     $errors          = [];
+	public array     $notices         = [];
+	public array     $passErrors      = [];
+	public array     $passNotices     = [];
+	public array     $headers         = [];
+	public ?Request  $previousRequest = null;
+	protected ?Route $route           = null;
 
 	public function __construct(array|string $query) {
+		// Get headers
+		$headers = apache_request_headers();
+		if (is_array($headers)) {
+			$this->headers = $headers;
+		}
+		else {
+			// Fallback to $_SERVER super global
+			$this->headers = [
+				'Accept'          => $_SERVER['HTTP_ACCEPT'],
+				'Accept-Encoding' => $_SERVER['HTTP_ACCEPT_ENCODING'],
+				'Accept-Language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'],
+				'Host'            => $_SERVER['HTTP_HOST'],
+				'User-Agent'      => $_SERVER['HTTP_USER_AGENT'],
+				'Referrer'        => $_SERVER['HTTP_REFERER'],
+				'Connection'      => $_SERVER['HTTP_CONNECTION'],
+			];
+		}
+
+		// Request method
 		$this->type = RequestMethod::tryFrom($_SERVER['REQUEST_METHOD']) ?? RequestMethod::GET;
+
+		// Parse path
 		if (is_array($query)) {
 			$this->parseArrayQuery($query);
 		}
@@ -43,13 +65,19 @@ class Request implements RequestInterface
 		$this->query = array_filter($_GET, static function($key) {
 			return $key !== 'p';
 		},                          ARRAY_FILTER_USE_KEY);
+
+		// Find route
 		$this->route = Router::getRoute($this->type, $this->path, $this->params);
+
+		// Previous request passing messages
 		if (isset($_SESSION['fromRequest'])) {
 			$this->previousRequest = unserialize($_SESSION['fromRequest'], [__CLASS__]);
 			unset($_SESSION['fromRequest']);
 			$this->errors = array_merge($this->previousRequest->passErrors, $this->errors);
 			$this->notices = array_merge($this->previousRequest->passNotices, $this->notices);
 		}
+
+
 		if (str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
 			$input = fopen("php://input", 'rb');
 			$this->body = '';
@@ -75,10 +103,24 @@ class Request implements RequestInterface
 		$this->request = $_REQUEST;
 	}
 
+	/**
+	 * Parse split URL path
+	 *
+	 * @param array $query
+	 *
+	 * @return void
+	 */
 	protected function parseArrayQuery(array $query) : void {
 		$this->path = array_map('strtolower', $query);
 	}
 
+	/**
+	 * Parse URL path
+	 *
+	 * @param string $query
+	 *
+	 * @return void
+	 */
 	protected function parseStringQuery(string $query) : void {
 		$url = parse_url($query);
 		$filePath = urldecode(ROOT.substr($url['path'], 1));
@@ -171,5 +213,23 @@ class Request implements RequestInterface
 
 	public function getMethod() : RequestMethod {
 		return $this->type;
+	}
+
+	/**
+	 * @return array|false
+	 */
+	public function getHeaders() : bool|array {
+		return $this->headers;
+	}
+
+	/**
+	 * Get one specific header by name
+	 *
+	 * @param string $name
+	 *
+	 * @return string|null
+	 */
+	public function header(string $name) : ?string {
+		return $this->headers[$name] ?? null;
 	}
 }
