@@ -1,6 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
+	"version": "0.1.1",
 	"repositories": [
 		{
 			"type": "composer",
@@ -24,8 +25,8 @@
 	"minimum-stability": "dev",
 	"require": {
 		"php": ">=8.1",
-		"lsr/helpers": "dev-master",
-		"lsr/routing": "dev-master",
-		"lsr/interfaces": "dev-master"
+		"lsr/helpers": "^0.1",
+		"lsr/routing": "^0.1",
+		"lsr/interfaces": "^0.1"
 	}
 }
