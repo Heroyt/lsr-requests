@@ -6,35 +6,57 @@
 namespace Lsr\Core\Requests;
 
 
+use Lsr\Core\App;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
-use Lsr\Core\Routing\Route;
+use Lsr\Core\Requests\Traits\RequestTrait;
 use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
+use Psr\Http\Message\UriInterface;
 
-class Request implements RequestInterface
+class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 {
 
-	public RequestMethod $type            = RequestMethod::GET;
-	public array         $path            = [];
-	public array     $query           = [];
-	public array     $params          = [];
-	public string    $body            = '';
-	public array     $put             = [];
-	public array     $post            = [];
-	public array     $get             = [];
-	public array     $request         = [];
-	public array     $errors          = [];
-	public array     $notices         = [];
-	public array     $passErrors      = [];
-	public array     $passNotices     = [];
-	public array     $headers         = [];
-	public ?Request  $previousRequest = null;
-	protected ?Route $route           = null;
+	use RequestTrait;
 
-	public function __construct(array|string $query) {
+	public RequestMethod $type = RequestMethod::GET;
+	/** @var string[] */
+	public array $path = [];
+	/** @var array<string, mixed> */
+	public array $query = [];
+	/** @var array<string, mixed> */
+	public array  $params = [];
+	public string $body   = '';
+	/** @var array<string, mixed> */
+	public array $put = [];
+	/** @var array<string, mixed> */
+	public array $post = [];
+	/** @var array<string, mixed> */
+	public array $get = [];
+	/** @var array<string, mixed> */
+	public array $request = [];
+	/** @var array<string|int, string> */
+	public array $errors = [];
+	/** @var string[] */
+	public array $notices = [];
+	/** @var array<string|int, string> */
+	public array $passErrors = [];
+	/** @var string[] */
+	public array $passNotices = [];
+	/** @var string[]|string[][] */
+	public array              $headers         = [];
+	public ?RequestInterface  $previousRequest = null;
+	protected ?RouteInterface $route           = null;
+
+	public function __construct(public UriInterface $uri, public string $httpVersion = '1.1') {
+		$query = App::isPrettyUrl() ? $uri->getPath() : ($_GET['p'] ?? []);
+
 		// Get headers
+		/**
+		 * @var array<string, string>|false $headers
+		 * @noinspection PhpComposerExtensionStubsInspection
+		 */
 		$headers = apache_request_headers();
 		if (is_array($headers)) {
 			$this->headers = $headers;
@@ -71,6 +93,7 @@ class Request implements RequestInterface
 
 		// Previous request passing messages
 		if (isset($_SESSION['fromRequest'])) {
+			// @phpstan-ignore-next-line
 			$this->previousRequest = unserialize($_SESSION['fromRequest'], [__CLASS__]);
 			unset($_SESSION['fromRequest']);
 			$this->errors = array_merge($this->previousRequest->passErrors, $this->errors);
@@ -89,7 +112,7 @@ class Request implements RequestInterface
 				$_POST = array_merge($_POST, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
 				$_REQUEST = array_merge($_REQUEST, $_POST);
 			}
-			elseif ($this->type === RequestMethod::UPDATE) {
+			elseif ($this->type === RequestMethod::UPDATE || $this->type === RequestMethod::PUT) {
 				$this->put = array_merge($this->put, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
 				$_REQUEST = array_merge($_REQUEST, $this->put);
 			}
@@ -106,7 +129,7 @@ class Request implements RequestInterface
 	/**
 	 * Parse split URL path
 	 *
-	 * @param array $query
+	 * @param string[] $query
 	 *
 	 * @return void
 	 */
@@ -127,6 +150,7 @@ class Request implements RequestInterface
 		if (file_exists($filePath) && is_file($filePath)) {
 			$extension = pathinfo($filePath, PATHINFO_EXTENSION);
 			if ($extension !== 'php') {
+				/** @noinspection PhpComposerExtensionStubsInspection */
 				$mime = match ($extension) {
 					'css' => 'text/css',
 					'scss' => 'text/x-scss',
@@ -140,13 +164,13 @@ class Request implements RequestInterface
 				exit(file_get_contents($filePath));
 			}
 		}
-		$this->parseArrayQuery(array_filter(explode('/', $url['path']), static function($a) {
+		$this->parseArrayQuery(array_filter(explode('/', $url['path'] ?? ''), static function($a) {
 			return !empty($a);
 		}));
 	}
 
 	/**
-	 * @return Route|null
+	 * @return RouteInterface|null
 	 */
 	public function getRoute() : ?RouteInterface {
 		return $this->route;
@@ -215,21 +239,4 @@ class Request implements RequestInterface
 		return $this->type;
 	}
 
-	/**
-	 * @return array|false
-	 */
-	public function getHeaders() : bool|array {
-		return $this->headers;
-	}
-
-	/**
-	 * Get one specific header by name
-	 *
-	 * @param string $name
-	 *
-	 * @return string|null
-	 */
-	public function header(string $name) : ?string {
-		return $this->headers[$name] ?? null;
-	}
 }

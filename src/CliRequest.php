@@ -17,13 +17,18 @@ class CliRequest implements RequestInterface
 
 	// TODO: Parse additional cli args and opts
 
-	public RequestMethod $type    = RequestMethod::CLI;
-	public array         $path    = [];
-	public array         $args    = [];
-	public array         $params  = [];
-	public array         $errors  = [];
-	public array         $notices = [];
-	protected ?CliRoute  $route   = null;
+	public RequestMethod $type = RequestMethod::CLI;
+	/** @var string[] */
+	public array $path = [];
+	/** @var string[] */
+	public array $args = [];
+	/** @var array<string, string> */
+	public array $params = [];
+	/** @var array<string|int, string> */
+	public array $errors = [];
+	/** @var string[] */
+	public array        $notices = [];
+	protected ?CliRoute $route   = null;
 
 	public function __construct(array|string $query) {
 		global $argv;
