@@ -6,7 +6,6 @@
 namespace Lsr\Core\Requests;
 
 
-use Lsr\Core\App;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Requests\Traits\RequestTrait;
 use Lsr\Core\Routing\Router;
@@ -29,8 +28,6 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	public array  $params = [];
 	public string $body   = '';
 	/** @var array<string, mixed> */
-	public array $put = [];
-	/** @var array<string, mixed> */
 	public array $post = [];
 	/** @var array<string, mixed> */
 	public array $get = [];
@@ -50,32 +47,37 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	protected ?RouteInterface $route           = null;
 
 	public function __construct(public UriInterface $uri, public string $httpVersion = '1.1') {
-		$query = App::isPrettyUrl() ? $uri->getPath() : ($_GET['p'] ?? []);
+		$query = $uri->getPath();
+
+		// If the request is made to a PHP file, get the query data from GET params
+		if (str_ends_with($query, '.php')) {
+			$query = ($_GET['p'] ?? []);
+		}
 
 		// Get headers
 		/**
 		 * @var array<string, string>|false $headers
 		 * @noinspection PhpComposerExtensionStubsInspection
 		 */
-		$headers = apache_request_headers();
+		$headers = function_exists('apache_request_headers') ? apache_request_headers() : false;
 		if (is_array($headers)) {
 			$this->headers = $headers;
 		}
 		else {
 			// Fallback to $_SERVER super global
 			$this->headers = [
-				'Accept'          => $_SERVER['HTTP_ACCEPT'],
-				'Accept-Encoding' => $_SERVER['HTTP_ACCEPT_ENCODING'],
-				'Accept-Language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'],
-				'Host'            => $_SERVER['HTTP_HOST'],
-				'User-Agent'      => $_SERVER['HTTP_USER_AGENT'],
-				'Referrer'        => $_SERVER['HTTP_REFERER'],
-				'Connection'      => $_SERVER['HTTP_CONNECTION'],
+				'Accept'          => $_SERVER['HTTP_ACCEPT'] ?? '*/*',
+				'Accept-Encoding' => $_SERVER['HTTP_ACCEPT_ENCODING'] ?? 'utf-8',
+				'Accept-Language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '',
+				'Host'            => $_SERVER['HTTP_HOST'] ?? 'localhost',
+				'User-Agent'      => $_SERVER['HTTP_USER_AGENT'] ?? '',
+				'Referrer'        => $_SERVER['HTTP_REFERER'] ?? '',
+				'Connection'      => $_SERVER['HTTP_CONNECTION'] ?? '',
 			];
 		}
 
 		// Request method
-		$this->type = RequestMethod::tryFrom($_SERVER['REQUEST_METHOD']) ?? RequestMethod::GET;
+		$this->type = RequestMethod::tryFrom($_SERVER['REQUEST_METHOD'] ?? '') ?? RequestMethod::GET;
 
 		// Parse path
 		if (is_array($query)) {
@@ -113,8 +115,8 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 				$_REQUEST = array_merge($_REQUEST, $_POST);
 			}
 			elseif ($this->type === RequestMethod::UPDATE || $this->type === RequestMethod::PUT) {
-				$this->put = array_merge($this->put, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
-				$_REQUEST = array_merge($_REQUEST, $this->put);
+				$this->post = array_merge($this->post, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+				$_REQUEST = array_merge($_REQUEST, $this->post);
 			}
 			elseif ($this->type === RequestMethod::GET) {
 				$_GET = array_merge($_GET, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
@@ -124,6 +126,10 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		$this->post = $_POST;
 		$this->get = $_GET;
 		$this->request = $_REQUEST;
+	}
+
+	public function getPath() : array {
+		return $this->path;
 	}
 
 	/**
@@ -231,12 +237,36 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		return $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
 	}
 
-	public function getPath() : array {
-		return $this->path;
-	}
-
 	public function getMethod() : RequestMethod {
 		return $this->type;
+	}
+
+	/**
+	 * Get a POST parameter from the request with a specified default fallback value
+	 *
+	 * @param string     $name
+	 * @param mixed|null $default
+	 *
+	 * @return mixed
+	 */
+	public function getPost(string $name, mixed $default = null) : mixed {
+		return $this->post[$name] ?? $default;
+	}
+
+	/**
+	 * Get a GET parameter from the request with a specified default fallback value
+	 *
+	 * @param string     $name
+	 * @param mixed|null $default
+	 *
+	 * @return mixed
+	 */
+	public function getGet(string $name, mixed $default = null) : mixed {
+		return $this->request[$name] ?? $default;
+	}
+
+	public function getParam(string $name, mixed $default = null) : mixed {
+		return $this->params[$name] ?? $default;
 	}
 
 }
