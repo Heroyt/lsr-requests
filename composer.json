@@ -1,7 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
-	"version": "dev-0.2.0",
+	"version": "0.2.0",
 	"repositories": [
 		{
 			"type": "composer",
