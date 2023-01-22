@@ -46,7 +46,10 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	public ?RequestInterface  $previousRequest = null;
 	protected ?RouteInterface $route           = null;
 
-	public function __construct(public UriInterface $uri, public string $httpVersion = '1.1') {
+	public function __construct(
+		public UriInterface $uri,
+		public string       $httpVersion = '1.1'
+	) {
 		$query = $uri->getPath();
 
 		// If the request is made to a PHP file, get the query data from GET params
@@ -57,7 +60,6 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		// Get headers
 		/**
 		 * @var array<string, string>|false $headers
-		 * @noinspection PhpComposerExtensionStubsInspection
 		 */
 		$headers = function_exists('apache_request_headers') ? apache_request_headers() : false;
 		if (is_array($headers)) {
@@ -92,16 +94,6 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 
 		// Find route
 		$this->route = Router::getRoute($this->type, $this->path, $this->params);
-
-		// Previous request passing messages
-		if (isset($_SESSION['fromRequest'])) {
-			// @phpstan-ignore-next-line
-			$this->previousRequest = unserialize($_SESSION['fromRequest'], [__CLASS__]);
-			unset($_SESSION['fromRequest']);
-			$this->errors = array_merge($this->previousRequest->passErrors, $this->errors);
-			$this->notices = array_merge($this->previousRequest->passNotices, $this->notices);
-		}
-
 
 		if (str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
 			$input = fopen("php://input", 'rb');
@@ -267,6 +259,54 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 
 	public function getParam(string $name, mixed $default = null) : mixed {
 		return $this->params[$name] ?? $default;
+	}
+
+	/**
+	 * @param RequestInterface $request
+	 *
+	 * @return Request
+	 */
+	public function setPreviousRequest(RequestInterface $request) : static {
+		$this->previousRequest = $request;
+		$this->errors = array_merge($this->previousRequest->getPassErrors(), $this->errors);
+		$this->notices = array_merge($this->previousRequest->getPassNotices(), $this->notices);
+		return $this;
+	}
+
+	public function addError(string $error) : static {
+		$this->errors[] = $error;
+		return $this;
+	}
+
+	public function addPassError(string $error) : static {
+		$this->passErrors[] = $error;
+		return $this;
+	}
+
+	public function getErrors() : array {
+		return $this->errors;
+	}
+
+	public function getPassErrors() : array {
+		return $this->passErrors;
+	}
+
+	public function addNotice(string $notice) : static {
+		$this->notices[] = $notice;
+		return $this;
+	}
+
+	public function addPassNotice(string $notice) : static {
+		$this->passNotices[] = $notice;
+		return $this;
+	}
+
+	public function getNotices() : array {
+		return $this->notices;
+	}
+
+	public function getPassNotices() : array {
+		return $this->passNotices;
 	}
 
 }

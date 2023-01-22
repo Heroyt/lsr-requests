@@ -109,4 +109,47 @@ class CliRequest implements RequestInterface
 	public function getParam(string $name, mixed $default = null) : mixed {
 		return $this->params[$name] ?? $default;
 	}
+
+	/**
+	 * @param RequestInterface $request
+	 *
+	 * @return static
+	 */
+	public function setPreviousRequest(RequestInterface $request) : static {
+		return $this;
+	}
+
+	public function addError(string $error) : static {
+		$this->errors[] = $error;
+		return $this;
+	}
+
+	public function addPassError(string $error) : static {
+		return $this;
+	}
+
+	public function getErrors() : array {
+		return $this->errors;
+	}
+
+	public function getPassErrors() : array {
+		return [];
+	}
+
+	public function addNotice(string $notice) : static {
+		$this->notices[] = $notice;
+		return $this;
+	}
+
+	public function addPassNotice(string $notice) : static {
+		return $this;
+	}
+
+	public function getNotices() : array {
+		return $this->notices;
+	}
+
+	public function getPassNotices() : array {
+		return [];
+	}
 }
