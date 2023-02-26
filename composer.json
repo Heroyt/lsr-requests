@@ -1,7 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"repositories": [
 		{
 			"type": "composer",
@@ -10,7 +10,7 @@
 	],
 	"require-dev": {
 		"roave/security-advisories": "dev-latest",
-		"phpunit/phpunit": "^9.5",
+		"phpunit/phpunit": "^10",
 		"phpstan/phpstan": "^1.8"
 	},
 	"autoload": {
