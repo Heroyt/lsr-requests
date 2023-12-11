@@ -12,6 +12,7 @@ use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
+use Lsr\Logging\Logger;
 use Psr\Http\Message\UriInterface;
 
 class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
@@ -27,11 +28,11 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	/** @var array<string, mixed> */
 	public array  $params = [];
 	public string $body   = '';
-	/** @var array<string, mixed> */
+	/** @var array<string, string|numeric|array> */
 	public array $post = [];
-	/** @var array<string, mixed> */
+	/** @var array<string, string|numeric|array> */
 	public array $get = [];
-	/** @var array<string, mixed> */
+	/** @var array<string, string|numeric|array> */
 	public array $request = [];
 	/** @var array<string|int, string> */
 	public array $errors = [];
@@ -50,6 +51,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		public UriInterface $uri,
 		public string       $httpVersion = '1.1'
 	) {
+		$logger = new Logger(LOG_DIR, 'request');
 		$query = $uri->getPath();
 
 		// If the request is made to a PHP file, get the query data from GET params
@@ -96,22 +98,23 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		$this->route = Router::getRoute($this->type, $this->path, $this->params);
 
 		if (str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
-			$input = fopen("php://input", 'rb');
-			$this->body = '';
-			while ($data = fread($input, 1024)) {
-				$this->body .= $data;
-			}
-			fclose($input);
+			$this->body = file_get_contents("php://input");
 			if ($this->type === RequestMethod::POST) {
+				if (!empty($this->body)) {
 				$_POST = array_merge($_POST, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+				}
 				$_REQUEST = array_merge($_REQUEST, $_POST);
 			}
 			elseif ($this->type === RequestMethod::UPDATE || $this->type === RequestMethod::PUT) {
+				if (!empty($this->body)) {
 				$this->post = array_merge($this->post, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+				}
 				$_REQUEST = array_merge($_REQUEST, $this->post);
 			}
 			elseif ($this->type === RequestMethod::GET) {
+				if (!empty($this->body)) {
 				$_GET = array_merge($_GET, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+				}
 				$_REQUEST = array_merge($_REQUEST, $_GET);
 			}
 		}

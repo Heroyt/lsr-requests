@@ -84,7 +84,15 @@ class Uri implements UriInterface
 	/** @noinspection RegExpUnnecessaryNonCapturingGroup */
 	private function filterPath(string $path) : string {
 		// @phpstan-ignore-next-line
-		return preg_replace_callback('/(?:[^'.static::CHAR_UNRESERVED.static::CHAR_SUB_DELIMS.'%:@\/]++|%(?![A-Fa-f0-9]{2}))/', [__CLASS__, 'rawurlencodeMatchZero'], $path);
+		return str_replace(
+			'//',
+			'/',
+			preg_replace_callback(
+				'/(?:[^' . static::CHAR_UNRESERVED . static::CHAR_SUB_DELIMS . '%:@\/]++|%(?![A-Fa-f0-9]{2}))/',
+				[__CLASS__, 'rawurlencodeMatchZero'],
+				$path
+			)
+		);
 	}
 
 	/** @noinspection RegExpUnnecessaryNonCapturingGroup */
