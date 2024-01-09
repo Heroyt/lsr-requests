@@ -39,12 +39,6 @@ class CliRequest implements RequestInterface
 			$this->parseStringQuery($query);
 		}
 
-		if (empty($this->path)) {
-			CliHelper::printErrorMessage('Missing the required path argument (1)');
-			CliHelper::printUsage();
-			exit(1);
-		}
-
 		$this->route = Router::getRoute(RequestMethod::CLI, $this->path, $this->params);
 		$this->args = array_slice($argv, 2);
 	}
@@ -67,6 +61,12 @@ class CliRequest implements RequestInterface
 	}
 
 	public function handle() : void {
+		if (empty($this->path)) {
+			CliHelper::printErrorMessage('Missing the required path argument (1)');
+			CliHelper::printUsage();
+			exit(1);
+		}
+
 		if (isset($this->route)) {
 			$this->route->handle($this);
 		}
