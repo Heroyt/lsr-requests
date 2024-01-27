@@ -13,10 +13,7 @@ trait RequestTrait
 
 	public StreamInterface $streamBody;
 
-	/**
-	 * @return array|false
-	 */
-	public function getHeaders() : bool|array {
+	public function getHeaders(): array {
 		return $this->headers;
 	}
 

@@ -263,12 +263,13 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		return $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
 	}
 
-	/**
-	 * @return RequestMethod
-	 * @phpstan-ignore-next-line
-	 */
-	public function getMethod(): RequestMethod {
+
+	public function getType(): RequestMethod {
 		return $this->type;
+	}
+
+	public function getMethod(): string {
+		return $this->type->value;
 	}
 
 	/**

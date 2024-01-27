@@ -9,7 +9,9 @@ class RouteNotFoundException extends Exception
 {
 
 	public function __construct(public RequestInterface $request) {
-		parent::__construct('Route "'.$this->request->getMethod()->value.' '.implode('/', $this->request->getPath()).'" was not found');
+		parent::__construct(
+			'Route "' . $this->request->getMethod() . ' ' . implode('/', $this->request->getPath()) . '" was not found'
+		);
 	}
 
 }
