@@ -1,7 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
-	"version": "0.2.5",
+  "version": "0.2.6",
 	"repositories": [
 		{
 			"type": "composer",
@@ -30,7 +30,7 @@
 		"lsr/helpers": "^0.2",
 		"lsr/routing": "^0.2",
 		"lsr/interfaces": "^0.2",
-		"psr/http-message": "^1"
+    "psr/http-message": "^2"
 	},
 	"extra": {
 		"branch-alias": {

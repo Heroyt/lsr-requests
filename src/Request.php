@@ -6,13 +6,13 @@
 namespace Lsr\Core\Requests;
 
 
+use JsonException;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Requests\Traits\RequestTrait;
 use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
-use Lsr\Logging\Logger;
 use Psr\Http\Message\UriInterface;
 
 class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
@@ -25,14 +25,14 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	public array $path = [];
 	/** @var array<string, mixed> */
 	public array $query = [];
-	/** @var array<string, mixed> */
+	/** @var array<string, string|numeric-string> */
 	public array  $params = [];
 	public string $body   = '';
-	/** @var array<string, string|numeric|array> */
+	/** @var array<string, string|numeric|array<string,string|numeric>> */
 	public array $post = [];
-	/** @var array<string, string|numeric|array> */
+	/** @var array<string, string|numeric|array<string,string|numeric>> */
 	public array $get = [];
-	/** @var array<string, string|numeric|array> */
+	/** @var array<string, string|numeric|array<string,string|numeric>> */
 	public array $request = [];
 	/** @var array<string|int, string> */
 	public array $errors = [];
@@ -47,11 +47,13 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	public ?RequestInterface  $previousRequest = null;
 	protected ?RouteInterface $route           = null;
 
-	public function __construct(
-		public UriInterface $uri,
-		public string       $httpVersion = '1.1'
-	) {
-		$logger = new Logger(LOG_DIR, 'request');
+	/**
+	 * @param UriInterface $uri
+	 * @param string       $httpVersion
+	 *
+	 * @throws JsonException
+	 */
+	public function __construct(public UriInterface $uri, public string $httpVersion = '1.1') {
 		$query = $uri->getPath();
 
 		// If the request is made to a PHP file, get the query data from GET params
@@ -62,6 +64,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		// Get headers
 		/**
 		 * @var array<string, string>|false $headers
+		 * @noinspection PhpUndefinedFunctionInspection
 		 */
 		$headers = function_exists('apache_request_headers') ? apache_request_headers() : false;
 		if (is_array($headers)) {
@@ -90,7 +93,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		else {
 			$this->parseStringQuery($query);
 		}
-		$this->query = array_filter($_GET, static function($key) {
+		$this->query = array_filter($_GET, static function ($key) {
 			return $key !== 'p';
 		},                          ARRAY_FILTER_USE_KEY);
 
@@ -98,22 +101,27 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		$this->route = Router::getRoute($this->type, $this->path, $this->params);
 
 		if (str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
-			$this->body = file_get_contents("php://input");
+			$body = file_get_contents("php://input");
+			$this->body = $body === false ? '' : $body;
 			if ($this->type === RequestMethod::POST) {
 				if (!empty($this->body)) {
-				$_POST = array_merge($_POST, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+					$_POST = array_merge($_POST, (array)json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
 				}
 				$_REQUEST = array_merge($_REQUEST, $_POST);
 			}
-			elseif ($this->type === RequestMethod::UPDATE || $this->type === RequestMethod::PUT) {
+			else if ($this->type === RequestMethod::UPDATE || $this->type === RequestMethod::PUT) {
 				if (!empty($this->body)) {
-				$this->post = array_merge($this->post, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+					/** @phpstan-ignore-next-line */
+					$this->post = array_merge(
+						$this->post,
+						(array)json_decode($this->body, true, 512, JSON_THROW_ON_ERROR)
+					);
 				}
 				$_REQUEST = array_merge($_REQUEST, $this->post);
 			}
-			elseif ($this->type === RequestMethod::GET) {
+			else if ($this->type === RequestMethod::GET) {
 				if (!empty($this->body)) {
-				$_GET = array_merge($_GET, json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
+					$_GET = array_merge($_GET, (array)json_decode($this->body, true, 512, JSON_THROW_ON_ERROR));
 				}
 				$_REQUEST = array_merge($_REQUEST, $_GET);
 			}
@@ -123,7 +131,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		$this->request = $_REQUEST;
 	}
 
-	public function getPath() : array {
+	public function getPath(): array {
 		return $this->path;
 	}
 
@@ -134,7 +142,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 *
 	 * @return void
 	 */
-	protected function parseArrayQuery(array $query) : void {
+	protected function parseArrayQuery(array $query): void {
 		$this->path = array_map('strtolower', $query);
 	}
 
@@ -145,27 +153,28 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 *
 	 * @return void
 	 */
-	protected function parseStringQuery(string $query) : void {
+	protected function parseStringQuery(string $query): void {
 		$url = parse_url($query);
-		$filePath = urldecode(ROOT.substr($url['path'], 1));
+		// @phpstan-ignore-next-line
+		$filePath = urldecode(ROOT . substr($url['path'], 1));
 		if (file_exists($filePath) && is_file($filePath)) {
 			$extension = pathinfo($filePath, PATHINFO_EXTENSION);
 			if ($extension !== 'php') {
 				/** @noinspection PhpComposerExtensionStubsInspection */
 				$mime = match ($extension) {
-					'css' => 'text/css',
-					'scss' => 'text/x-scss',
-					'sass' => 'text/x-sass',
-					'csv' => 'text/csv',
+					'css'   => 'text/css',
+					'scss'  => 'text/x-scss',
+					'sass'  => 'text/x-sass',
+					'csv'   => 'text/csv',
 					'css.map', 'js.map', 'map', 'json' => 'application/json',
-					'js' => 'text/javascript',
+					'js'    => 'text/javascript',
 					default => mime_content_type($filePath),
 				};
-				header('Content-Type: '.$mime);
+				header('Content-Type: ' . $mime);
 				exit(file_get_contents($filePath));
 			}
 		}
-		$this->parseArrayQuery(array_filter(explode('/', $url['path'] ?? ''), static function($a) {
+		$this->parseArrayQuery(array_filter(explode('/', $url['path'] ?? ''), static function ($a) {
 			return !empty($a);
 		}));
 	}
@@ -173,7 +182,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	/**
 	 * @return RouteInterface|null
 	 */
-	public function getRoute() : ?RouteInterface {
+	public function getRoute(): ?RouteInterface {
 		return $this->route;
 	}
 
@@ -181,7 +190,7 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 * @return void
 	 * @throws RouteNotFoundException
 	 */
-	public function handle() : void {
+	public function handle(): void {
 		if (isset($this->route)) {
 			$this->route->handle($this);
 			return;
@@ -189,15 +198,34 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 		throw new RouteNotFoundException($this);
 	}
 
-	public function __get($name) {
+	/**
+	 * @param string $name
+	 *
+	 * @return mixed
+	 * @noinspection PhpMissingParamTypeInspection
+	 */
+	public function __get($name): mixed {
 		return $this->params[$name] ?? null;
 	}
 
-	public function __set($name, $value) {
+	/**
+	 * @param string $name
+	 * @param string $value
+	 *
+	 * @return void
+	 * @noinspection PhpMissingParamTypeInspection
+	 */
+	public function __set($name, $value): void {
 		$this->params[$name] = $value;
 	}
 
-	public function __isset($name) {
+	/**
+	 * @param string $name
+	 *
+	 * @return bool
+	 * @noinspection PhpMissingParamTypeInspection
+	 */
+	public function __isset($name): bool {
 		return isset($this->params[$name]);
 	}
 
@@ -206,16 +234,19 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 *
 	 * @return bool
 	 */
-	public function isAjax() : bool {
-		return
-			(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
-			(!empty($_SERVER['X_REQUESTED_WITH']) && strtolower($_SERVER['X_REQUESTED_WITH']) === 'xmlhttprequest');
+	public function isAjax(): bool {
+		return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower(
+					$_SERVER['HTTP_X_REQUESTED_WITH']
+				) === 'xmlhttprequest') || (!empty($_SERVER['X_REQUESTED_WITH']) && strtolower(
+					$_SERVER['X_REQUESTED_WITH']
+				) === 'xmlhttprequest');
 	}
 
 	/**
 	 * @inheritDoc
+	 * @return array<string,mixed>
 	 */
-	public function jsonSerialize() : array {
+	public function jsonSerialize(): array {
 		$vars = get_object_vars($this);
 		if (isset($this->route) && !empty($this->route->getName())) {
 			$vars['routeName'] = $this->route->getName();
@@ -228,11 +259,15 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 *
 	 * @return string
 	 */
-	public function getIp() : string {
+	public function getIp(): string {
 		return $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
 	}
 
-	public function getMethod() : RequestMethod {
+	/**
+	 * @return RequestMethod
+	 * @phpstan-ignore-next-line
+	 */
+	public function getMethod(): RequestMethod {
 		return $this->type;
 	}
 
@@ -240,11 +275,11 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 * Get a POST parameter from the request with a specified default fallback value
 	 *
 	 * @param string     $name
-	 * @param mixed|null $default
+	 * @param string|numeric|array<string,string|numeric>|null $default
 	 *
-	 * @return mixed
+	 * @return string|numeric|array<string,string|numeric>|null
 	 */
-	public function getPost(string $name, mixed $default = null) : mixed {
+	public function getPost(string $name, string|array|int|float|null $default = null): string|array|int|float|null {
 		return $this->post[$name] ?? $default;
 	}
 
@@ -252,64 +287,70 @@ class Request implements RequestInterface, \Psr\Http\Message\RequestInterface
 	 * Get a GET parameter from the request with a specified default fallback value
 	 *
 	 * @param string     $name
-	 * @param mixed|null $default
+	 * @param string|numeric|array<string,string|numeric>|null $default
 	 *
-	 * @return mixed
+	 * @return string|numeric|array<string,string|numeric>|null
 	 */
-	public function getGet(string $name, mixed $default = null) : mixed {
+	public function getGet(string $name, string|array|int|float|null $default = null): string|array|int|float|null {
 		return $this->request[$name] ?? $default;
 	}
 
-	public function getParam(string $name, mixed $default = null) : mixed {
+	/**
+	 * @param string              $name
+	 * @param string|numeric|null $default
+	 *
+	 * @return string|numeric|null
+	 */
+	public function getParam(string $name, mixed $default = null): string|int|float|null {
 		return $this->params[$name] ?? $default;
 	}
 
 	/**
 	 * @param RequestInterface $request
 	 *
-	 * @return Request
+	 * @return $this
 	 */
-	public function setPreviousRequest(RequestInterface $request) : static {
+	public function setPreviousRequest(RequestInterface $request): static {
 		$this->previousRequest = $request;
 		$this->errors = array_merge($this->previousRequest->getPassErrors(), $this->errors);
 		$this->notices = array_merge($this->previousRequest->getPassNotices(), $this->notices);
 		return $this;
 	}
 
-	public function addError(string $error) : static {
+	public function getPassErrors(): array {
+		return $this->passErrors;
+	}
+
+	public function getPassNotices(): array {
+		return $this->passNotices;
+	}
+
+	public function addError(string $error): static {
 		$this->errors[] = $error;
 		return $this;
 	}
 
-	public function addPassError(string $error) : static {
+	public function addPassError(string $error): static {
 		$this->passErrors[] = $error;
 		return $this;
 	}
 
-	public function getErrors() : array {
+	public function getErrors(): array {
 		return $this->errors;
 	}
 
-	public function getPassErrors() : array {
-		return $this->passErrors;
-	}
-
-	public function addNotice(string $notice) : static {
+	public function addNotice(string $notice): static {
 		$this->notices[] = $notice;
 		return $this;
 	}
 
-	public function addPassNotice(string $notice) : static {
+	public function addPassNotice(string $notice): static {
 		$this->passNotices[] = $notice;
 		return $this;
 	}
 
-	public function getNotices() : array {
+	public function getNotices(): array {
 		return $this->notices;
-	}
-
-	public function getPassNotices() : array {
-		return $this->passNotices;
 	}
 
 }
