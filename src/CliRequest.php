@@ -102,11 +102,15 @@ class CliRequest implements RequestInterface
 		return $this->path;
 	}
 
-	public function getMethod() : RequestMethod {
+	public function getType(): RequestMethod {
 		return $this->type;
 	}
 
-	public function getParam(string $name, mixed $default = null) : mixed {
+	public function getMethod(): string {
+		return $this->type->value;
+	}
+
+	public function getParam(string $name, mixed $default = null): string|int|float|null {
 		return $this->params[$name] ?? $default;
 	}
 
