@@ -110,6 +110,16 @@ class CliRequest implements RequestInterface
 		return $this->type->value;
 	}
 
+	/**
+	 * @param array<string,string|numeric|null> $params
+	 *
+	 * @return $this
+	 */
+	public function setParams(array $params): static {
+		$this->params = $params;
+		return $this;
+	}
+
 	public function getParam(string $name, mixed $default = null): string|int|float|null {
 		return $this->params[$name] ?? $default;
 	}
