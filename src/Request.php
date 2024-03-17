@@ -20,7 +20,7 @@ class Request implements RequestInterface, Psr7RequestInterface
 {
 
 	/** @var array<string, string|numeric-string> */
-	public array          $params = [];
+	public array $params = [];
 	/** @var array<string|int, string> */
 	public array $errors = [];
 	/** @var string[] */
@@ -28,7 +28,7 @@ class Request implements RequestInterface, Psr7RequestInterface
 	/** @var array<string|int, string> */
 	public array $passErrors = [];
 	/** @var string[] */
-	public array $passNotices = [];
+	public array          $passNotices = [];
 	public ?RequestInterface  $previousRequest = null;
 	protected ?RouteInterface $route           = null;
 	private RequestMethod $type;
@@ -41,34 +41,21 @@ class Request implements RequestInterface, Psr7RequestInterface
 	public function __construct(private readonly Psr7RequestInterface $psrRequest) {
 	}
 
-	/**
-	 * @return RouteInterface|null
-	 * @interal
-	 */
-	public function getRoute(): ?RouteInterface {
-		if (!isset($this->route)) {
-			$this->route = Router::getRoute($this->getType(), $this->getPath(), $this->params);
-		}
-		return $this->route;
-	}
+	public function getStaticFileMime(): string {
+		$path = $this->getUri()->getPath();
+		$filePath = urldecode(ROOT . substr($path, 1));
+		$extension = pathinfo($filePath, PATHINFO_EXTENSION);
 
-	/**
-	 * Get request method as an Enum
-	 *
-	 * @return RequestMethod
-	 */
-	public function getType(): RequestMethod {
-		$this->type ??= RequestMethod::from(strtoupper($this->psrRequest->getMethod()));
-		return $this->type;
-	}
-
-	/**
-	 * Retrieves the HTTP method of the request.
-	 *
-	 * @return string Returns the request method.
-	 */
-	public function getMethod(): string {
-		return $this->psrRequest->getMethod();
+		/** @noinspection PhpComposerExtensionStubsInspection */
+		return match ($extension) {
+			'css'                              => 'text/css',
+			'scss'                             => 'text/x-scss',
+			'sass'                             => 'text/x-sass',
+			'csv'                              => 'text/csv',
+			'css.map', 'js.map', 'map', 'json' => 'application/json',
+			'js'                               => 'text/javascript',
+			default                            => mime_content_type($filePath),
+		};
 	}
 
 	/**
@@ -148,23 +135,13 @@ class Request implements RequestInterface, Psr7RequestInterface
 		);
 	}
 
-	protected function isStaticFile(string $query): bool {
-		$url = parse_url($query);
+	public function isStaticFile(): bool {
+		$path = $this->getUri()->getPath();
 		// @phpstan-ignore-next-line
-		$filePath = urldecode(ROOT . substr($url['path'], 1));
+		$filePath = urldecode(ROOT . substr($path, 1));
 		if (file_exists($filePath) && is_file($filePath)) {
 			$extension = pathinfo($filePath, PATHINFO_EXTENSION);
 			if ($extension !== 'php') {
-				/** @noinspection PhpComposerExtensionStubsInspection */
-				$mime = match ($extension) {
-					'css'   => 'text/css',
-					'scss'  => 'text/x-scss',
-					'sass'  => 'text/x-sass',
-					'csv'   => 'text/csv',
-					'css.map', 'js.map', 'map', 'json' => 'application/json',
-					'js'    => 'text/javascript',
-					default => mime_content_type($filePath),
-				};
 				return true;
 			}
 		}
@@ -182,6 +159,36 @@ class Request implements RequestInterface, Psr7RequestInterface
 			throw new RouteNotFoundException($this);
 		}
 		$route->handle($this);
+	}
+
+	/**
+	 * @return RouteInterface|null
+	 * @interal
+	 */
+	public function getRoute(): ?RouteInterface {
+		if (!isset($this->route)) {
+			$this->route = Router::getRoute($this->getType(), $this->getPath(), $this->params);
+		}
+		return $this->route;
+	}
+
+	/**
+	 * Get request method as an Enum
+	 *
+	 * @return RequestMethod
+	 */
+	public function getType(): RequestMethod {
+		$this->type ??= RequestMethod::from(strtoupper($this->psrRequest->getMethod()));
+		return $this->type;
+	}
+
+	/**
+	 * Retrieves the HTTP method of the request.
+	 *
+	 * @return string Returns the request method.
+	 */
+	public function getMethod(): string {
+		return $this->psrRequest->getMethod();
 	}
 
 	/**
