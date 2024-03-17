@@ -129,7 +129,7 @@ class Request implements RequestInterface, Psr7RequestInterface
 	 * @return string[]
 	 */
 	protected function parseArrayQuery(array $query): array {
-		return array_map('strtolower', $query);
+		return array_values(array_map('strtolower', $query));
 	}
 
 	/**
@@ -140,6 +140,15 @@ class Request implements RequestInterface, Psr7RequestInterface
 	 * @return string[]
 	 */
 	protected function parseStringQuery(string $query): array {
+		$url = parse_url($query);
+		return $this->parseArrayQuery(
+			array_filter(
+				explode('/', $url['path'] ?? ''), static fn($a) => !empty($a)
+			)
+		);
+	}
+
+	protected function isStaticFile(string $query): bool {
 		$url = parse_url($query);
 		// @phpstan-ignore-next-line
 		$filePath = urldecode(ROOT . substr($url['path'], 1));
@@ -156,15 +165,10 @@ class Request implements RequestInterface, Psr7RequestInterface
 					'js'    => 'text/javascript',
 					default => mime_content_type($filePath),
 				};
-				header('Content-Type: ' . $mime);
-				exit(file_get_contents($filePath));
+				return true;
 			}
 		}
-		return $this->parseArrayQuery(
-			array_filter(
-				explode('/', $url['path'] ?? ''), static fn($a) => !empty($a)
-			)
-		);
+		return false;
 	}
 
 	/**
@@ -217,9 +221,9 @@ class Request implements RequestInterface, Psr7RequestInterface
 	 * @return bool
 	 */
 	public function isAjax(): bool {
-		return $this->hasHeader('x_requested_with') && in_array(
+		return $this->hasHeader('x-requested-with') && in_array(
 				'xmlhttprequest',
-				array_map(static fn(string $val) => strtolower(trim($val)), $this->getHeader('x_requested_with')),
+				array_map(static fn(string $val) => strtolower(trim($val)), $this->getHeader('x-requested-with')),
 				true
 			);
 	}
