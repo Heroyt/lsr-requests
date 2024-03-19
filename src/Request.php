@@ -16,6 +16,11 @@ use Psr\Http\Message\ServerRequestInterface as Psr7RequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 
+/**
+ * PSR-7 request decorator class.
+ *
+ * @see https://www.php-fig.org/psr/psr-7/
+ */
 class Request implements RequestInterface, Psr7RequestInterface
 {
 

@@ -6,12 +6,24 @@ use JsonException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
 use function explode;
 use function strtolower;
 use function trim;
 
 class RequestFactory
 {
+
+	/**
+	 * Create a new stream from string content
+	 *
+	 * @param string $content
+	 *
+	 * @return StreamInterface
+	 */
+	public static function createStream(string $content): StreamInterface {
+		return (new Psr17Factory())->createStream($content);
+	}
 
 	/**
 	 * @return Request
