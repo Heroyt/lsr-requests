@@ -21,7 +21,7 @@ use Psr\Http\Message\UriInterface;
  *
  * @see https://www.php-fig.org/psr/psr-7/
  */
-class Request implements RequestInterface, Psr7RequestInterface
+class Request implements RequestInterface
 {
 
 	/** @var array<string, string|numeric-string> */
