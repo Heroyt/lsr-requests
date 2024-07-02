@@ -2,9 +2,16 @@
 
 namespace Lsr\Core\Requests;
 
-use JsonException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
+use Symfony\Component\Serializer\Encoder\JsonDecode;
+use Symfony\Component\Serializer\Encoder\JsonEncode;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\JsonSerializableNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
 
 /**
  * PSR-7 response decorator class.
@@ -14,7 +21,37 @@ use Psr\Http\Message\StreamInterface;
 readonly class Response implements ResponseInterface
 {
 
+	private Serializer $serializer;
+
 	public function __construct(public ResponseInterface $psrResponse) {
+		$normalizerContext = [
+			AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function (object $object, string $format, array $context) {
+				if (property_exists($object, 'code')) {
+					return $object->code;
+				}
+				if (property_exists($object, 'id')) {
+					return $object->id;
+				}
+				if (property_exists($object, 'name')) {
+					return $object->name;
+				}
+				return null;
+			},
+		];
+		$this->serializer = new Serializer(
+			[
+				new JsonSerializableNormalizer(defaultContext: $normalizerContext),
+				new ObjectNormalizer(defaultContext: $normalizerContext),
+			], [
+				new JsonEncoder(
+					defaultContext: [
+						                JsonDecode::ASSOCIATIVE => true,
+						                JsonEncode::OPTIONS     => JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR,
+					                ]
+				),
+				new XmlEncoder(),
+			],
+		);
 	}
 
 	/**
@@ -132,14 +169,13 @@ readonly class Response implements ResponseInterface
 	 * @param mixed $data
 	 *
 	 * @return $this
-	 * @throws JsonException
 	 * @see  Response::withBody()
 	 * @see  Response::withHeader()
 	 *
 	 */
 	public function withJsonBody(mixed $data): static {
 		$body = RequestFactory::createStream(
-			json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+			$this->serializer->serialize($data, 'json'),
 		);
 		return $this->withBody($body)->withHeader('Content-Type', 'application/json');
 	}
@@ -149,5 +185,25 @@ readonly class Response implements ResponseInterface
 	 */
 	public function withHeader(string $name, $value): static {
 		return new self($this->psrResponse->withHeader($name, $value));
+	}
+
+	/**
+	 * Return an instance with the provided value encoded as a XML string in the response body.
+	 *
+	 * @post Sets the response body to XML-encoded string
+	 * @post Sets the Content-Type header to application/xml.
+	 *
+	 * @param mixed $data
+	 *
+	 * @return $this
+	 * @see  Response::withBody()
+	 * @see  Response::withHeader()
+	 *
+	 */
+	public function withXmlBody(mixed $data): static {
+		$body = RequestFactory::createStream(
+			$this->serializer->serialize($data, 'xml'),
+		);
+		return $this->withBody($body)->withHeader('Content-Type', 'application/xml');
 	}
 }
