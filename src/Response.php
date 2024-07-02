@@ -28,13 +28,13 @@ readonly class Response implements ResponseInterface
 	public function __construct(public ResponseInterface $psrResponse) {
 		$normalizerContext = [
 			AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function (object $object, string $format, array $context) {
-				if (property_exists($object, 'code')) {
+				if (property_exists($object, 'code') && isset($object->code)) {
 					return $object->code;
 				}
-				if (property_exists($object, 'id')) {
+				if (property_exists($object, 'id') && isset($object->id)) {
 					return $object->id;
 				}
-				if (property_exists($object, 'name')) {
+				if (property_exists($object, 'name') && isset($object->name)) {
 					return $object->name;
 				}
 				return null;
