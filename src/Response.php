@@ -9,6 +9,8 @@ use Symfony\Component\Serializer\Encoder\JsonEncode;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\BackedEnumNormalizer;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Serializer\Normalizer\JsonSerializableNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
@@ -40,6 +42,8 @@ readonly class Response implements ResponseInterface
 		];
 		$this->serializer = new Serializer(
 			[
+				new DateTimeNormalizer(),
+				new BackedEnumNormalizer(),
 				new JsonSerializableNormalizer(defaultContext: $normalizerContext),
 				new ObjectNormalizer(defaultContext: $normalizerContext),
 			], [
