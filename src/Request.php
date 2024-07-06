@@ -28,11 +28,11 @@ class Request implements RequestInterface
 	public array $params = [];
 	/** @var array<string|int, string> */
 	public array $errors = [];
-	/** @var string[] */
+	/** @var array<string|array{title?:string,content:string,type?:string}> */
 	public array $notices = [];
 	/** @var array<string|int, string> */
 	public array $passErrors = [];
-	/** @var string[] */
+	/** @var array<string|array{title?:string,content:string,type?:string}> */
 	public array          $passNotices = [];
 	public ?RequestInterface  $previousRequest = null;
 	protected ?RouteInterface $route           = null;
@@ -311,11 +311,11 @@ class Request implements RequestInterface
 	 * Get a POST parameter from the request with a specified default fallback value
 	 *
 	 * @param string $name
-	 * @param string|numeric|array<string,string|numeric>|null $default
+	 * @param string|numeric|array<string,string|numeric>|bool|null $default
 	 *
-	 * @return string|numeric|array<string,string|numeric>|null
+	 * @return string|numeric|array<string,string|numeric>|bool|null
 	 */
-	public function getPost(string $name, string|array|int|float|null $default = null): string|array|int|float|null {
+	public function getPost(string $name, string|array|int|float|bool|null $default = null): string|array|int|float|bool|null {
 		return $this->psrRequest->getParsedBody()[$name] ?? $default;
 	}
 
@@ -342,11 +342,11 @@ class Request implements RequestInterface
 	 * Get a GET parameter from the request with a specified default fallback value
 	 *
 	 * @param string $name
-	 * @param string|numeric|array<string,string|numeric>|null $default
+	 * @param string|numeric|array<string,string|numeric>|bool|null $default
 	 *
-	 * @return string|numeric|array<string,string|numeric>|null
+	 * @return string|numeric|array<string,string|numeric>|bool|null
 	 */
-	public function getGet(string $name, string|array|int|float|null $default = null): string|array|int|float|null {
+	public function getGet(string $name, string|array|int|float|bool|null $default = null): string|array|int|float|bool|null {
 		return $this->psrRequest->getQueryParams()[$name] ?? $default;
 	}
 
@@ -406,16 +406,29 @@ class Request implements RequestInterface
 		return $this->errors;
 	}
 
-	public function addNotice(string $notice): static {
+	/**
+	 * @param string|array{title?:string,content:string,type?:string} $notice
+	 *
+	 * @return $this
+	 */
+	public function addNotice(string|array $notice): static {
 		$this->notices[] = $notice;
 		return $this;
 	}
 
-	public function addPassNotice(string $notice): static {
+	/**
+	 * @param string|array{title?:string,content:string,type?:string} $notice
+	 *
+	 * @return $this
+	 */
+	public function addPassNotice(string|array $notice): static {
 		$this->passNotices[] = $notice;
 		return $this;
 	}
 
+	/**
+	 * @return array<string|array{title?:string,content:string,type?:string}>
+	 */
 	public function getNotices(): array {
 		return $this->notices;
 	}
