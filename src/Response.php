@@ -59,6 +59,17 @@ readonly class Response implements ResponseInterface
 	}
 
 	/**
+	 * @param int $status Status code
+	 * @param array $headers Response headers
+	 * @param string|resource|StreamInterface|null $body Response body
+	 * @param string $version Protocol version
+	 * @param string|null $reason Reason phrase (when empty a default will be used based on the status code)
+	 */
+	public static function create(int $status = 200, array $headers = [], $body = null, string $version = '1.1', string $reason = null): Response {
+		return new self(new \Nyholm\Psr7\Response($status, $headers, $body, $version, $reason));
+	}
+
+	/**
 	 * @inheritDoc
 	 */
 	public function getProtocolVersion(): string {

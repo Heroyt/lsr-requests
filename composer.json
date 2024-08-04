@@ -1,7 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
-  "version": "0.2.16",
+  "version": "0.2.17",
 	"repositories": [
 		{
 			"type": "composer",
@@ -34,7 +34,8 @@
     "nyholm/psr7": "^1.8",
     "nyholm/psr7-server": "^1.1",
 		"symfony/serializer": "^7.1",
-		"symfony/property-access": "^7.1"
+		"symfony/property-access": "^7.1",
+		"zircote/swagger-php": "^4.10"
 	},
 	"extra": {
 		"branch-alias": {
