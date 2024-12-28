@@ -339,7 +339,7 @@ class RequestTest extends TestCase
 		self::assertEquals($psrRequest->getParsedBody(), $request->getParsedBody());
 
 		if (in_array($request->getType(), [RequestMethod::POST, RequestMethod::PUT, RequestMethod::UPDATE], true)) {
-			foreach ($request->getParsedBody() as $key => $value) {
+			foreach (($request->getParsedBody() ?? []) as $key => $value) {
 				self::assertEquals($value, $request->getPost($key));
 			}
 		}

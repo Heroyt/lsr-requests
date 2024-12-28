@@ -1,7 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
-  "version": "0.2.18",
+  "version": "0.3.0",
 	"repositories": [
 		{
 			"type": "composer",
@@ -26,6 +26,12 @@
 			"Lsr\\Core\\Requests\\": "src/"
 		}
 	},
+  "autoload-dev": {
+    "psr-4": {
+      "TestCases\\": "tests/TestCases",
+      "Mocks\\": "tests/Mocks"
+    }
+  },
 	"authors": [
 		{
 			"name": "Tomáš Vojík",
@@ -43,7 +49,7 @@
 		"symfony/serializer": "^7.1",
 		"symfony/property-access": "^7.1",
 		"zircote/swagger-php": "^4.10",
-		"lsr/object-validation": "^0.3.0"
+		"lsr/object-validation": "^0.3.1"
 	},
 	"extra": {
 		"branch-alias": {

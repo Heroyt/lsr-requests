@@ -8,8 +8,6 @@ namespace Lsr\Core\Requests;
 
 use InvalidArgumentException;
 use JsonException;
-use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
-use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
@@ -70,7 +68,7 @@ class Request implements RequestInterface
 		string                      $version = '1.1',
 		array                       $serverParams = [],
 	): self {
-		return new self(
+		return RequestFactory::fromPsrRequest(
 			new ServerRequest(
 				$method,
 				$uri,
@@ -330,10 +328,10 @@ class Request implements RequestInterface
 	 *
 	 * @template T of string|null|array<mixed>|numeric
 	 * @param string $name
-	 * @param T $default
+	 * @param T      $default
 	 *
 	 * @return string|array<string,string|numeric>|null|T
- */
+	 */
 	public function getPost(string $name, mixed $default = null): mixed {
 		$body = $this->psrRequest->getParsedBody();
 		if ($body === null) {
@@ -371,8 +369,8 @@ class Request implements RequestInterface
 	 * Get a GET parameter from the request with a specified default fallback value.
 	 *
 	 * @template T of string|null|array<mixed>|numeric
-	 * @param string                                           $name
-	 * @param T $default
+	 * @param string $name
+	 * @param T      $default
 	 *
 	 * @return string|array<string,string|numeric>|T
 	 */
@@ -394,8 +392,9 @@ class Request implements RequestInterface
 	/**
 	 * Get a URL path parameter
 	 * @template T of mixed|null
-	 * @param string     $name
-	 * @param T $default
+	 *
+	 * @param string $name
+	 * @param T      $default
 	 *
 	 * @return string|T
 	 */
