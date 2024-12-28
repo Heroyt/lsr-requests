@@ -11,6 +11,13 @@ use Throwable;
 #[OA\Schema(schema: 'ErrorResponse', type: 'object')]
 readonly class ErrorResponse implements JsonSerializable
 {
+	/**
+	 * @param string         $title
+	 * @param ErrorType      $type
+	 * @param string|null    $detail
+	 * @param Throwable|null $exception
+	 * @param array<string,mixed>|null     $values
+	 */
 	public function __construct(
 		#[OA\Property(example: 'Error title')]
 		public string     $title,
@@ -37,6 +44,20 @@ readonly class ErrorResponse implements JsonSerializable
 	) {
 	}
 
+	/**
+	 * @return array{
+	 *     title:string,
+	 *     type:string,
+	 *     detail?:string,
+	 *     values?:array<string,mixed>,
+	 *     exception?:array{
+	 *        message:string,
+	 *        code:int|string,
+	 *        trace:list<array{function: string, line?: int, file?: string, class?: class-string, type?: string, args?: array<mixed>, object?: object}>},
+	 *        sql?:string
+	 *     }
+	 * }
+	 */
 	public function jsonSerialize(): array {
 		$error = [
 			'type'  => $this->type->value,
@@ -57,8 +78,9 @@ readonly class ErrorResponse implements JsonSerializable
 				'code'    => $this->exception->getCode(),
 				'trace'   => $this->exception->getTrace(),
 			];
-			if ($this->exception instanceof Exception) {
+			if (method_exists($this->exception, 'getSql')) {
 				$error['sql'] = $this->exception->getSql();
+				assert(is_string($error['sql']));
 			}
 		}
 

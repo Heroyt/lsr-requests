@@ -55,9 +55,10 @@ class RequestFactory
 		foreach ($request->getHeader('content-type') as $headerValue) {
 			if (strtolower(trim(explode(';', $headerValue, 2)[0])) === 'application/json') {
 				$body = $request->getBody();
-				$request = $request->withParsedBody(
-					json_decode($body->getContents(), true, 512, JSON_THROW_ON_ERROR)
-				);
+				$body->rewind();
+				$data = json_decode($body->getContents(), true, 512, JSON_THROW_ON_ERROR);
+				assert(is_array($data));
+				$request = $request->withParsedBody($data);
 				$body->rewind();
 				break;
 			}

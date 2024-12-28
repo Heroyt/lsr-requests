@@ -59,13 +59,13 @@ readonly class Response implements ResponseInterface
 	}
 
 	/**
-	 * @param int $status Status code
-	 * @param array $headers Response headers
-	 * @param string|resource|StreamInterface|null $body Response body
-	 * @param string $version Protocol version
-	 * @param string|null $reason Reason phrase (when empty a default will be used based on the status code)
+	 * @param int                                  $status  Status code
+	 * @param array<string,string>                 $headers Response headers
+	 * @param string|resource|StreamInterface|null $body    Response body
+	 * @param string                               $version Protocol version
+	 * @param string|null                          $reason  Reason phrase (when empty a default will be used based on the status code)
 	 */
-	public static function create(int $status = 200, array $headers = [], $body = null, string $version = '1.1', string $reason = null): Response {
+	public static function create(int $status = 200, array $headers = [], mixed $body = null, string $version = '1.1', ?string $reason = null): Response {
 		return new self(new \Nyholm\Psr7\Response($status, $headers, $body, $version, $reason));
 	}
 
@@ -78,8 +78,9 @@ readonly class Response implements ResponseInterface
 
 	/**
 	 * @inheritDoc
+	 * @return Response
 	 */
-	public function withProtocolVersion(string $version): static {
+	public function withProtocolVersion(string $version): Response {
 		return new self($this->psrResponse->withProtocolVersion($version));
 	}
 
@@ -113,15 +114,17 @@ readonly class Response implements ResponseInterface
 
 	/**
 	 * @inheritDoc
+	 * @return Response
 	 */
-	public function withAddedHeader(string $name, $value): static {
+	public function withAddedHeader(string $name, $value): Response {
 		return new self($this->psrResponse->withAddedHeader($name, $value));
 	}
 
 	/**
 	 * @inheritDoc
+	 * @return Response
 	 */
-	public function withoutHeader(string $name): static {
+	public function withoutHeader(string $name): Response {
 		return new self($this->psrResponse->withoutHeader($name));
 	}
 
@@ -141,8 +144,9 @@ readonly class Response implements ResponseInterface
 
 	/**
 	 * @inheritDoc
+	 * @return Response
 	 */
-	public function withStatus(int $code, string $reasonPhrase = ''): static {
+	public function withStatus(int $code, string $reasonPhrase = ''): Response {
 		return new self($this->psrResponse->withStatus($code, $reasonPhrase));
 	}
 
@@ -160,18 +164,19 @@ readonly class Response implements ResponseInterface
 	 *
 	 * @param string $body
 	 *
-	 * @return $this
-	 * @see Response::withBody()
+	 * @return Response
 	 *
+	 * @see Response::withBody()
 	 */
-	public function withStringBody(string $body): static {
+	public function withStringBody(string $body): Response {
 		return $this->withBody(RequestFactory::createStream($body));
 	}
 
 	/**
 	 * @inheritDoc
+	 * @return Response
 	 */
-	public function withBody(StreamInterface $body): static {
+	public function withBody(StreamInterface $body): Response {
 		return new self($this->psrResponse->withBody($body));
 	}
 
@@ -183,12 +188,11 @@ readonly class Response implements ResponseInterface
 	 *
 	 * @param mixed $data
 	 *
-	 * @return $this
+	 * @return Response
 	 * @see  Response::withBody()
 	 * @see  Response::withHeader()
-	 *
 	 */
-	public function withJsonBody(mixed $data): static {
+	public function withJsonBody(mixed $data): Response {
 		$body = RequestFactory::createStream(
 			$this->serializer->serialize($data, 'json'),
 		);
@@ -197,8 +201,9 @@ readonly class Response implements ResponseInterface
 
 	/**
 	 * @inheritDoc
+	 * @return Response
 	 */
-	public function withHeader(string $name, $value): static {
+	public function withHeader(string $name, $value): Response {
 		return new self($this->psrResponse->withHeader($name, $value));
 	}
 
@@ -210,12 +215,12 @@ readonly class Response implements ResponseInterface
 	 *
 	 * @param mixed $data
 	 *
-	 * @return $this
+	 * @return Response
 	 * @see  Response::withBody()
 	 * @see  Response::withHeader()
 	 *
 	 */
-	public function withXmlBody(mixed $data): static {
+	public function withXmlBody(mixed $data): Response {
 		$body = RequestFactory::createStream(
 			$this->serializer->serialize($data, 'xml'),
 		);

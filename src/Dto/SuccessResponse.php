@@ -7,6 +7,12 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(schema: 'SuccessResponse', type: 'object')]
 readonly class SuccessResponse implements \JsonSerializable
 {
+
+	/**
+	 * @param string      $message
+	 * @param string|null $detail
+	 * @param array<string,mixed>|null  $values
+	 */
 	public function __construct(
 		#[OA\Property(example: 'Message')]
 		public string     $message = 'Success',
@@ -18,6 +24,7 @@ readonly class SuccessResponse implements \JsonSerializable
 
     /**
      * @inheritDoc
+     * @return array{message:string,detail?:string|null,values?:null|array<string,mixed>}
      */
     public function jsonSerialize() : array {
 	    $data = [

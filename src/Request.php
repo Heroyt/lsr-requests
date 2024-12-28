@@ -7,13 +7,16 @@ namespace Lsr\Core\Requests;
 
 
 use InvalidArgumentException;
+use JsonException;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
+use Nyholm\Psr7\ServerRequest;
 use Psr\Http\Message\ServerRequestInterface as Psr7RequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UploadedFileInterface;
 use Psr\Http\Message\UriInterface;
 
 /**
@@ -26,24 +29,57 @@ class Request implements RequestInterface
 
 	/** @var array<string, string|numeric-string> */
 	public array $params = [];
-	/** @var array<string|int, string> */
+	/** @var string[] */
 	public array $errors = [];
 	/** @var array<string|array{title?:string,content:string,type?:string}> */
 	public array $notices = [];
-	/** @var array<string|int, string> */
+	/** @var string[] */
 	public array $passErrors = [];
 	/** @var array<string|array{title?:string,content:string,type?:string}> */
-	public array          $passNotices = [];
+	public array              $passNotices     = [];
 	public ?RequestInterface  $previousRequest = null;
 	protected ?RouteInterface $route           = null;
-	private RequestMethod $type;
+	private RequestMethod     $type;
 	/** @var string[] */
 	private array $path;
 
 	/**
 	 * @param Psr7RequestInterface $psrRequest
 	 */
-	public function __construct(private readonly Psr7RequestInterface $psrRequest) {
+	public function __construct(
+		private readonly Psr7RequestInterface $psrRequest
+	) {
+	}
+
+	/**
+	 * @param string                      $method
+	 * @param string|UriInterface         $uri
+	 * @param array<string,string>        $headers
+	 * @param string|StreamInterface|null $body
+	 * @param string                      $version
+	 * @param array<string,mixed>         $serverParams
+	 *
+	 * @return self
+	 * @throws JsonException
+	 */
+	public static function create(
+		string                      $method = 'GET',
+		string|UriInterface         $uri = '/',
+		array                       $headers = [],
+		string|StreamInterface|null $body = null,
+		string                      $version = '1.1',
+		array                       $serverParams = [],
+	): self {
+		return new self(
+			new ServerRequest(
+				$method,
+				$uri,
+				$headers,
+				$body,
+				$version,
+				$serverParams,
+			)
+		);
 	}
 
 	public function getStaticFileMime(): string {
@@ -52,6 +88,7 @@ class Request implements RequestInterface
 		$extension = pathinfo($filePath, PATHINFO_EXTENSION);
 
 		/** @noinspection PhpComposerExtensionStubsInspection */
+		/** @phpstan-ignore return.type */
 		return match ($extension) {
 			'css'                              => 'text/css',
 			'scss'                             => 'text/x-scss',
@@ -75,6 +112,7 @@ class Request implements RequestInterface
 
 			// If the request is made to a PHP file, get the query data from GET params
 			if (str_ends_with($query, '.php')) {
+				/** @var string[] $query */
 				$query = $this->psrRequest->getQueryParams()['p'] ?? [];
 			}
 
@@ -107,9 +145,10 @@ class Request implements RequestInterface
 	 * values, you may need to parse the query string from `getUri()->getQuery()`
 	 * or from the `QUERY_STRING` server param.
 	 *
-	 * @return array
+	 * @return array<string,string|array<mixed>>
 	 */
 	public function getQueryParams(): array {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getQueryParams();
 	}
 
@@ -135,14 +174,14 @@ class Request implements RequestInterface
 		$url = parse_url($query);
 		return $this->parseArrayQuery(
 			array_filter(
-				explode('/', $url['path'] ?? ''), static fn($a) => !empty($a)
+				explode('/', $url['path'] ?? ''),
+				static fn($a) => !empty($a)
 			)
 		);
 	}
 
 	public function isStaticFile(): bool {
 		$path = $this->getUri()->getPath();
-		// @phpstan-ignore-next-line
 		$filePath = urldecode(ROOT . substr($path, 1));
 		if (file_exists($filePath) && is_file($filePath)) {
 			$extension = pathinfo($filePath, PATHINFO_EXTENSION);
@@ -151,30 +190,6 @@ class Request implements RequestInterface
 			}
 		}
 		return false;
-	}
-
-	/**
-	 * @return void
-	 * @throws RouteNotFoundException
-	 * @deprecated
-	 */
-	public function handle(): void {
-		$route = $this->getRoute();
-		if (!isset($route)) {
-			throw new RouteNotFoundException($this);
-		}
-		$route->handle($this);
-	}
-
-	/**
-	 * @return RouteInterface|null
-	 * @interal
-	 */
-	public function getRoute(): ?RouteInterface {
-		if (!isset($this->route)) {
-			$this->route = Router::getRoute($this->getType(), $this->getPath(), $this->params);
-		}
-		return $this->route;
 	}
 
 	/**
@@ -290,8 +305,10 @@ class Request implements RequestInterface
 	 * @return string
 	 */
 	public function getIp(): string {
-		$params = $this->psrRequest->getServerParams();
-		return $params['HTTP_CLIENT_IP'] ?? $params['HTTP_X_FORWARDED_FOR'] ?? $params['REMOTE_ADDR'] ?? '';
+		$params = $this->getServerParams();
+		$ip = $params['HTTP_CLIENT_IP'] ?? $params['HTTP_X_FORWARDED_FOR'] ?? $params['REMOTE_ADDR'] ?? '';
+		assert(is_string($ip));
+		return $ip;
 	}
 
 	/**
@@ -301,22 +318,33 @@ class Request implements RequestInterface
 	 * typically derived from PHP's $_SERVER superglobal. The data IS NOT
 	 * REQUIRED to originate from $_SERVER.
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getServerParams(): array {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getServerParams();
 	}
 
 	/**
-	 * Get a POST parameter from the request with a specified default fallback value
+	 * Get a POST parameter from the request with a specified default fallback value.
 	 *
+	 * @template T of string|null|array<mixed>|numeric
 	 * @param string $name
-	 * @param string|numeric|array<string,string|numeric>|bool|null $default
+	 * @param T $default
 	 *
-	 * @return string|numeric|array<string,string|numeric>|bool|null
-	 */
-	public function getPost(string $name, string|array|int|float|bool|null $default = null): string|array|int|float|bool|null {
-		return $this->psrRequest->getParsedBody()[$name] ?? $default;
+	 * @return string|array<string,string|numeric>|null|T
+ */
+	public function getPost(string $name, mixed $default = null): mixed {
+		$body = $this->psrRequest->getParsedBody();
+		if ($body === null) {
+			return null;
+		}
+		if (is_object($body)) {
+			/** @phpstan-ignore return.type */
+			return $body->$name ?? $default;
+		}
+		/** @phpstan-ignore return.type */
+		return $body[$name] ?? $default;
 	}
 
 	/**
@@ -331,27 +359,30 @@ class Request implements RequestInterface
 	 * potential types MUST be arrays or objects only. A null value indicates
 	 * the absence of body content.
 	 *
-	 * @return null|array|object The deserialized body parameters, if any.
+	 * @return null|array<string,mixed>|object The deserialized body parameters, if any.
 	 *     These will typically be an array or object.
 	 */
 	public function getParsedBody(): object|array|null {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getParsedBody();
 	}
 
 	/**
-	 * Get a GET parameter from the request with a specified default fallback value
+	 * Get a GET parameter from the request with a specified default fallback value.
 	 *
-	 * @param string $name
-	 * @param string|numeric|array<string,string|numeric>|bool|null $default
+	 * @template T of string|null|array<mixed>|numeric
+	 * @param string                                           $name
+	 * @param T $default
 	 *
-	 * @return string|numeric|array<string,string|numeric>|bool|null
+	 * @return string|array<string,string|numeric>|T
 	 */
-	public function getGet(string $name, string|array|int|float|bool|null $default = null): string|array|int|float|bool|null {
+	public function getGet(string $name, mixed $default = null): mixed {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getQueryParams()[$name] ?? $default;
 	}
 
 	/**
-	 * @param array<string,string|numeric|null> $params
+	 * @param array<string,string> $params
 	 *
 	 * @return $this
 	 */
@@ -362,13 +393,13 @@ class Request implements RequestInterface
 
 	/**
 	 * Get a URL path parameter
+	 * @template T of mixed|null
+	 * @param string     $name
+	 * @param T $default
 	 *
-	 * @param string              $name
-	 * @param string|numeric|null $default
-	 *
-	 * @return string|numeric|null
+	 * @return string|T
 	 */
-	public function getParam(string $name, mixed $default = null): string|int|float|null {
+	public function getParam(string $name, mixed $default = null): mixed {
 		return $this->params[$name] ?? $default;
 	}
 
@@ -384,10 +415,16 @@ class Request implements RequestInterface
 		return $this;
 	}
 
+	/**
+	 * @return string[]
+	 */
 	public function getPassErrors(): array {
 		return $this->passErrors;
 	}
 
+	/**
+	 * @return array<string|array{title?:string,content:string,type?:string}>
+	 */
 	public function getPassNotices(): array {
 		return $this->passNotices;
 	}
@@ -402,6 +439,9 @@ class Request implements RequestInterface
 		return $this;
 	}
 
+	/**
+	 * @return string[]
+	 */
 	public function getErrors(): array {
 		return $this->errors;
 	}
@@ -456,9 +496,9 @@ class Request implements RequestInterface
 	 *
 	 * @param string $version HTTP protocol version
 	 *
-	 * @return static
+	 * @return Request
 	 */
-	public function withProtocolVersion(string $version): static {
+	public function withProtocolVersion(string $version): Request {
 		return new self($this->psrRequest->withProtocolVersion($version));
 	}
 
@@ -528,10 +568,10 @@ class Request implements RequestInterface
 	 * @param string          $name  Case-insensitive header field name.
 	 * @param string|string[] $value Header value(s).
 	 *
-	 * @return static
+	 * @return Request
 	 * @throws InvalidArgumentException for invalid header names or values.
 	 */
-	public function withHeader(string $name, $value): static {
+	public function withHeader(string $name, $value): Request {
 		return new self($this->psrRequest->withHeader($name, $value));
 	}
 
@@ -549,10 +589,10 @@ class Request implements RequestInterface
 	 * @param string          $name  Case-insensitive header field name to add.
 	 * @param string|string[] $value Header value(s).
 	 *
-	 * @return static
+	 * @return Request
 	 * @throws InvalidArgumentException for invalid header names or values.
 	 */
-	public function withAddedHeader(string $name, $value): static {
+	public function withAddedHeader(string $name, $value): Request {
 		return new self($this->psrRequest->withAddedHeader($name, $value));
 	}
 
@@ -567,9 +607,9 @@ class Request implements RequestInterface
 	 *
 	 * @param string $name Case-insensitive header field name to remove.
 	 *
-	 * @return static
+	 * @return Request
 	 */
-	public function withoutHeader(string $name): static {
+	public function withoutHeader(string $name): Request {
 		return new self($this->psrRequest->withoutHeader($name));
 	}
 
@@ -593,10 +633,10 @@ class Request implements RequestInterface
 	 *
 	 * @param StreamInterface $body Body.
 	 *
-	 * @return static
+	 * @return Request
 	 * @throws InvalidArgumentException When the body is not valid.
 	 */
-	public function withBody(StreamInterface $body): static {
+	public function withBody(StreamInterface $body): Request {
 		return new self($this->psrRequest->withBody($body));
 	}
 
@@ -635,11 +675,11 @@ class Request implements RequestInterface
 	 * @link http://tools.ietf.org/html/rfc7230#section-5.3 (for the various
 	 *     request-target forms allowed in request messages)
 	 *
-	 * @param mixed $requestTarget
+	 * @param string $requestTarget
 	 *
-	 * @return static
+	 * @return Request
 	 */
-	public function withRequestTarget($requestTarget): static {
+	public function withRequestTarget(string $requestTarget): Request {
 		return new self($this->psrRequest->withRequestTarget($requestTarget));
 	}
 
@@ -656,10 +696,10 @@ class Request implements RequestInterface
 	 *
 	 * @param string $method Case-sensitive method.
 	 *
-	 * @return static
+	 * @return Request
 	 * @throws InvalidArgumentException for invalid HTTP methods.
 	 */
-	public function withMethod(string $method): static {
+	public function withMethod(string $method): Request {
 		return new self($this->psrRequest->withMethod($method));
 	}
 
@@ -693,9 +733,9 @@ class Request implements RequestInterface
 	 * @param UriInterface $uri          New request URI to use.
 	 * @param bool         $preserveHost Preserve the original state of the Host header.
 	 *
-	 * @return static
+	 * @return Request
 	 */
-	public function withUri(UriInterface $uri, bool $preserveHost = false): static {
+	public function withUri(UriInterface $uri, bool $preserveHost = false): Request {
 		return new self($this->psrRequest->withUri($uri, $preserveHost));
 	}
 
@@ -707,9 +747,10 @@ class Request implements RequestInterface
 	 * The data MUST be compatible with the structure of the $_COOKIE
 	 * superglobal.
 	 *
-	 * @return array
+	 * @return array<string,string>
 	 */
 	public function getCookieParams(): array {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getCookieParams();
 	}
 
@@ -727,11 +768,11 @@ class Request implements RequestInterface
 	 * immutability of the message, and MUST return an instance that has the
 	 * updated cookie values.
 	 *
-	 * @param array $cookies Array of key/value pairs representing cookies.
+	 * @param array<string,string> $cookies Array of key/value pairs representing cookies.
 	 *
-	 * @return static
+	 * @return Request
 	 */
-	public function withCookieParams(array $cookies): static {
+	public function withCookieParams(array $cookies): Request {
 		return new self($this->psrRequest->withCookieParams($cookies));
 	}
 
@@ -753,12 +794,12 @@ class Request implements RequestInterface
 	 * immutability of the message, and MUST return an instance that has the
 	 * updated query string arguments.
 	 *
-	 * @param array $query Array of query string arguments, typically from
-	 *                     $_GET.
+	 * @param array<string,string|string[]|array<string,mixed>> $query Array of query string arguments, typically from
+	 *                                                                 $_GET.
 	 *
-	 * @return static
+	 * @return Request
 	 */
-	public function withQueryParams(array $query): static {
+	public function withQueryParams(array $query): Request {
 		return new self($this->psrRequest->withQueryParams($query));
 	}
 
@@ -771,10 +812,11 @@ class Request implements RequestInterface
 	 * These values MAY be prepared from $_FILES or the message body during
 	 * instantiation, or MAY be injected via withUploadedFiles().
 	 *
-	 * @return array An array tree of UploadedFileInterface instances; an empty
+	 * @return UploadedFileInterface[]|UploadedFileInterface[][] An array tree of UploadedFileInterface instances; an empty
 	 *     array MUST be returned if no data is present.
 	 */
 	public function getUploadedFiles(): array {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getUploadedFiles();
 	}
 
@@ -785,12 +827,12 @@ class Request implements RequestInterface
 	 * immutability of the message, and MUST return an instance that has the
 	 * updated body parameters.
 	 *
-	 * @param array $uploadedFiles An array tree of UploadedFileInterface instances.
+	 * @param UploadedFileInterface[]|UploadedFileInterface[][] $uploadedFiles An array tree of UploadedFileInterface instances.
 	 *
-	 * @return static
+	 * @return Request
 	 * @throws InvalidArgumentException if an invalid structure is provided.
 	 */
-	public function withUploadedFiles(array $uploadedFiles): static {
+	public function withUploadedFiles(array $uploadedFiles): Request {
 		return new self($this->psrRequest->withUploadedFiles($uploadedFiles));
 	}
 
@@ -816,14 +858,14 @@ class Request implements RequestInterface
 	 * immutability of the message, and MUST return an instance that has the
 	 * updated body parameters.
 	 *
-	 * @param null|array|object $data The deserialized body data. This will
-	 *                                typically be in an array or object.
+	 * @param null|array<string,mixed>|object $data The deserialized body data. This will
+	 *                                              typically be in an array or object.
 	 *
-	 * @return static
+	 * @return Request
 	 * @throws InvalidArgumentException if an unsupported argument type is
 	 *                                provided.
 	 */
-	public function withParsedBody($data): static {
+	public function withParsedBody($data): Request {
 		return new self($this->psrRequest->withParsedBody($data));
 	}
 
@@ -836,9 +878,10 @@ class Request implements RequestInterface
 	 * deserializing non-form-encoded message bodies; etc. Attributes
 	 * will be application and request specific, and CAN be mutable.
 	 *
-	 * @return array Attributes derived from the request.
+	 * @return array<string,mixed> Attributes derived from the request.
 	 */
 	public function getAttributes(): array {
+		/** @phpstan-ignore return.type */
 		return $this->psrRequest->getAttributes();
 	}
 
@@ -875,10 +918,10 @@ class Request implements RequestInterface
 	 * @param string $name  The attribute name.
 	 * @param mixed  $value The value of the attribute.
 	 *
-	 * @return static
+	 * @return Request
 	 * @see getAttributes()
 	 */
-	public function withAttribute(string $name, $value): static {
+	public function withAttribute(string $name, mixed $value): Request {
 		return new self($this->psrRequest->withAttribute($name, $value));
 	}
 
@@ -894,10 +937,10 @@ class Request implements RequestInterface
 	 *
 	 * @param string $name The attribute name.
 	 *
-	 * @return static
+	 * @return Request
 	 * @see getAttributes()
 	 */
-	public function withoutAttribute(string $name): static {
+	public function withoutAttribute(string $name): Request {
 		return new self($this->psrRequest->withoutAttribute($name));
 	}
 }
