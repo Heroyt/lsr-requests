@@ -498,7 +498,18 @@ class Request implements RequestInterface
 	 * @return Request
 	 */
 	public function withProtocolVersion(string $version): Request {
-		return new self($this->psrRequest->withProtocolVersion($version));
+		$new = new self($this->psrRequest->withProtocolVersion($version));
+		$this->copyPropertiesToRequest($new);
+		return $new;
+	}
+
+	private function copyPropertiesToRequest(Request $request): void {
+		$request->params = $this->params;
+		$request->errors = $this->errors;
+		$request->notices = $this->notices;
+		$request->passErrors = $this->passErrors;
+		$request->passNotices = $this->passNotices;
+		$request->previousRequest = $this->previousRequest;
 	}
 
 	/**
@@ -571,7 +582,9 @@ class Request implements RequestInterface
 	 * @throws InvalidArgumentException for invalid header names or values.
 	 */
 	public function withHeader(string $name, $value): Request {
-		return new self($this->psrRequest->withHeader($name, $value));
+		$new = new self($this->psrRequest->withHeader($name, $value));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -592,7 +605,9 @@ class Request implements RequestInterface
 	 * @throws InvalidArgumentException for invalid header names or values.
 	 */
 	public function withAddedHeader(string $name, $value): Request {
-		return new self($this->psrRequest->withAddedHeader($name, $value));
+		$new = new self($this->psrRequest->withAddedHeader($name, $value));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -609,7 +624,9 @@ class Request implements RequestInterface
 	 * @return Request
 	 */
 	public function withoutHeader(string $name): Request {
-		return new self($this->psrRequest->withoutHeader($name));
+		$new = new self($this->psrRequest->withoutHeader($name));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -636,7 +653,9 @@ class Request implements RequestInterface
 	 * @throws InvalidArgumentException When the body is not valid.
 	 */
 	public function withBody(StreamInterface $body): Request {
-		return new self($this->psrRequest->withBody($body));
+		$new = new self($this->psrRequest->withBody($body));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -679,7 +698,9 @@ class Request implements RequestInterface
 	 * @return Request
 	 */
 	public function withRequestTarget(string $requestTarget): Request {
-		return new self($this->psrRequest->withRequestTarget($requestTarget));
+		$new = new self($this->psrRequest->withRequestTarget($requestTarget));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -699,7 +720,9 @@ class Request implements RequestInterface
 	 * @throws InvalidArgumentException for invalid HTTP methods.
 	 */
 	public function withMethod(string $method): Request {
-		return new self($this->psrRequest->withMethod($method));
+		$new = new self($this->psrRequest->withMethod($method));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -735,7 +758,9 @@ class Request implements RequestInterface
 	 * @return Request
 	 */
 	public function withUri(UriInterface $uri, bool $preserveHost = false): Request {
-		return new self($this->psrRequest->withUri($uri, $preserveHost));
+		$new = new self($this->psrRequest->withUri($uri, $preserveHost));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -772,7 +797,9 @@ class Request implements RequestInterface
 	 * @return Request
 	 */
 	public function withCookieParams(array $cookies): Request {
-		return new self($this->psrRequest->withCookieParams($cookies));
+		$new = new self($this->psrRequest->withCookieParams($cookies));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -799,7 +826,9 @@ class Request implements RequestInterface
 	 * @return Request
 	 */
 	public function withQueryParams(array $query): Request {
-		return new self($this->psrRequest->withQueryParams($query));
+		$new = new self($this->psrRequest->withQueryParams($query));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -832,7 +861,9 @@ class Request implements RequestInterface
 	 * @throws InvalidArgumentException if an invalid structure is provided.
 	 */
 	public function withUploadedFiles(array $uploadedFiles): Request {
-		return new self($this->psrRequest->withUploadedFiles($uploadedFiles));
+		$new = new self($this->psrRequest->withUploadedFiles($uploadedFiles));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -865,7 +896,9 @@ class Request implements RequestInterface
 	 *                                provided.
 	 */
 	public function withParsedBody($data): Request {
-		return new self($this->psrRequest->withParsedBody($data));
+		$new = new self($this->psrRequest->withParsedBody($data));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -921,7 +954,9 @@ class Request implements RequestInterface
 	 * @see getAttributes()
 	 */
 	public function withAttribute(string $name, mixed $value): Request {
-		return new self($this->psrRequest->withAttribute($name, $value));
+		$new = new self($this->psrRequest->withAttribute($name, $value));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 
 	/**
@@ -940,6 +975,8 @@ class Request implements RequestInterface
 	 * @see getAttributes()
 	 */
 	public function withoutAttribute(string $name): Request {
-		return new self($this->psrRequest->withoutAttribute($name));
+		$new = new self($this->psrRequest->withoutAttribute($name));
+		$this->copyPropertiesToRequest($new);
+		return $new;
 	}
 }
