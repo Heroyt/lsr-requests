@@ -2,61 +2,51 @@
 
 namespace Lsr\Core\Requests;
 
-use JsonException;
+use Lsr\Exceptions\DispatchBreakException;
+use Lsr\Interfaces\RequestFactoryInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamInterface;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use Symfony\Component\Serializer\Serializer;
 use function explode;
 use function strtolower;
 use function trim;
 
-class RequestFactory
+final readonly class RequestFactory implements RequestFactoryInterface
 {
 
-	/**
-	 * Create a new stream from string content
-	 *
-	 * @param string $content
-	 *
-	 * @return StreamInterface
-	 */
-	public static function createStream(string $content): StreamInterface {
-		return (new Psr17Factory())->createStream($content);
-	}
+	private ServerRequestCreator $requestCreator;
 
-	/**
-	 * @return Request
-	 * @throws JsonException
-	 */
-	public static function getHttpRequest(): Request {
+	public function __construct(
+		private Serializer $serializer,
+	) {
 		$psr17Factory = new Psr17Factory();
-
-		$creator = new ServerRequestCreator(
+		$this->requestCreator = new ServerRequestCreator(
 			$psr17Factory, // ServerRequestFactory
 			$psr17Factory, // UriFactory
 			$psr17Factory, // UploadedFileFactory
-			$psr17Factory  // StreamFactory
+			$psr17Factory // StreamFactory
 		);
-
-		return self::fromPsrRequest($creator->fromGlobals());
 	}
 
-	/**
-	 * Create a new instance of the Request decorator from any PSR-7 ServerRequestInterface.
-	 *
-	 * @param ServerRequestInterface $request
-	 *
-	 * @return Request
-	 * @throws JsonException
-	 */
-	public static function fromPsrRequest(ServerRequestInterface $request): Request {
+	public function getHttpRequest(): Request {
+		return $this->fromPsrRequest($this->requestCreator->fromGlobals());
+	}
+
+	public function fromPsrRequest(ServerRequestInterface $request): Request {
 		// Maybe parse JSON body
 		foreach ($request->getHeader('content-type') as $headerValue) {
 			if (strtolower(trim(explode(';', $headerValue, 2)[0])) === 'application/json') {
 				$body = $request->getBody();
 				$body->rewind();
-				$data = json_decode($body->getContents(), true, 512, JSON_THROW_ON_ERROR);
+				try {
+					$data = $this->serializer->decode($body->getContents(), 'json');
+				} catch (ExceptionInterface $e) {
+					throw DispatchBreakException::createBadRequest(
+						'Invalid JSON body: ' . $e->getMessage(),
+					);
+				}
 				assert(is_array($data));
 				$request = $request->withParsedBody($data);
 				$body->rewind();

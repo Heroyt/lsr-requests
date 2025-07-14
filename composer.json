@@ -1,7 +1,7 @@
 {
 	"name": "lsr/request",
 	"description": "Laser framework core - Requests.",
-  "version": "0.3.3",
+  "version": "0.3.4",
 	"repositories": [
 		{
 			"type": "composer",
@@ -19,7 +19,8 @@
 		"roave/security-advisories": "dev-latest",
     "phpunit/phpunit": "^11",
     "phpstan/phpstan": "^2",
-    "squizlabs/php_codesniffer": "^3.11"
+    "squizlabs/php_codesniffer": "^3.11",
+    "nette/di": "^3.2"
   },
 	"autoload": {
 		"psr-4": {

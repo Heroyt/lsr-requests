@@ -2,6 +2,7 @@
 
 namespace Lsr\Core\Requests;
 
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Symfony\Component\Serializer\Encoder\JsonDecode;
@@ -169,7 +170,7 @@ readonly class Response implements ResponseInterface
 	 * @see Response::withBody()
 	 */
 	public function withStringBody(string $body): Response {
-		return $this->withBody(RequestFactory::createStream($body));
+		return $this->withBody(new Psr17Factory()->createStream($body));
 	}
 
 	/**
@@ -193,7 +194,7 @@ readonly class Response implements ResponseInterface
 	 * @see  Response::withHeader()
 	 */
 	public function withJsonBody(mixed $data): Response {
-		$body = RequestFactory::createStream(
+		$body = new Psr17Factory()->createStream(
 			$this->serializer->serialize($data, 'json'),
 		);
 		return $this->withBody($body)->withHeader('Content-Type', 'application/json');
@@ -221,7 +222,7 @@ readonly class Response implements ResponseInterface
 	 *
 	 */
 	public function withXmlBody(mixed $data): Response {
-		$body = RequestFactory::createStream(
+		$body = new Psr17Factory()->createStream(
 			$this->serializer->serialize($data, 'xml'),
 		);
 		return $this->withBody($body)->withHeader('Content-Type', 'application/xml');
