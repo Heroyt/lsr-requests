@@ -5,6 +5,7 @@ namespace Lsr\Core\Requests\Validation;
 
 use Lsr\Core\Requests\Request;
 use Lsr\ObjectValidation\Exceptions\ValidationException;
+use Lsr\ObjectValidation\Exceptions\ValidationMultiException;
 use Lsr\ObjectValidation\Validator;
 use Lsr\Serializer\Mapper;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
@@ -47,7 +48,29 @@ readonly class RequestValidationMapper
 			]
 		);
 
-		new Validator()->validateAll($object);
+		$exceptions = [];
+
+		try {
+			new Validator()->validateAll($object);
+		} catch (ValidationException $e) {
+			$exceptions[] = $e;
+		}
+
+		try {
+			if (method_exists($object, 'validate')) {
+				$object->validate();
+			}
+		} catch (ValidationException $e) {
+			$exceptions[] = $e;
+		}
+
+		if (count($exceptions) === 1) {
+			throw $exceptions[0];
+		}
+
+		if (count($exceptions) > 1) {
+			throw new ValidationMultiException($exceptions);
+		}
 
 		return $object;
 	}
@@ -74,7 +97,29 @@ readonly class RequestValidationMapper
 			]
 		);
 
-		new Validator()->validateAll($object);
+		$exceptions = [];
+
+		try {
+			new Validator()->validateAll($object);
+		} catch (ValidationException $e) {
+			$exceptions[] = $e;
+		}
+
+		try {
+			if (method_exists($object, 'validate')) {
+				$object->validate();
+			}
+		} catch (ValidationException $e) {
+			$exceptions[] = $e;
+		}
+
+		if (count($exceptions) === 1) {
+			throw $exceptions[0];
+		}
+
+		if (count($exceptions) > 1) {
+			throw new ValidationMultiException($exceptions);
+		}
 
 		return $object;
 	}
