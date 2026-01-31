@@ -1,13 +1,13 @@
 {
-	"name": "lsr/request",
-	"description": "Laser framework core - Requests.",
-  "version": "0.3.6",
-	"repositories": [
-		{
-			"type": "composer",
-			"url": "https://packages.laserliga.cz"
-		}
-	],
+  "name": "lsr/request",
+  "description": "Laser framework core - Requests.",
+  "version": "0.3.7",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.laserliga.cz"
+    }
+  ],
   "scripts": {
     "test": "XDEBUG_MODE=coverage ./vendor/bin/phpunit",
     "docs": "doxygen",
@@ -15,46 +15,46 @@
     "phpcs": "./vendor/bin/phpcs",
     "phpcbf": "./vendor/bin/phpcbf"
   },
-	"require-dev": {
-		"roave/security-advisories": "dev-latest",
-    "phpunit/phpunit": "^11",
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
+    "phpunit/phpunit": "^12",
     "phpstan/phpstan": "^2",
-    "squizlabs/php_codesniffer": "^3.11",
+    "squizlabs/php_codesniffer": "^4",
     "nette/di": "^3.2"
   },
-	"autoload": {
-		"psr-4": {
-			"Lsr\\Core\\Requests\\": "src/"
-		}
-	},
+  "autoload": {
+    "psr-4": {
+      "Lsr\\Core\\Requests\\": "src/"
+    }
+  },
   "autoload-dev": {
     "psr-4": {
       "TestCases\\": "tests/TestCases",
       "Mocks\\": "tests/Mocks"
     }
   },
-	"authors": [
-		{
-			"name": "Tomáš Vojík",
-			"email": "vojik@wboy.cz"
-		}
-	],
-	"minimum-stability": "stable",
-	"require": {
+  "authors": [
+    {
+      "name": "Tomáš Vojík",
+      "email": "vojik@wboy.cz"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require": {
     "php": ">= 8.4",
-		"lsr/helpers": "^0.3",
-		"lsr/interfaces": "^0.3.1",
+    "lsr/helpers": "^0.3",
+    "lsr/interfaces": "^0.3.1",
     "psr/http-message": "^2",
     "nyholm/psr7": "^1.8",
     "nyholm/psr7-server": "^1.1",
-		"symfony/serializer": "^7.1",
-		"symfony/property-access": "^7.1",
-    "zircote/swagger-php": "^5.0",
-		"lsr/object-validation": "^0.3.1"
-	},
-	"extra": {
-		"branch-alias": {
-			"v0.2": "0.2.x-dev"
-		}
-	}
+    "symfony/serializer": "^8|^7",
+    "symfony/property-access": "^8|^7",
+    "zircote/swagger-php": "^6|^5",
+    "lsr/object-validation": "^0.3.1"
+  },
+  "extra": {
+    "branch-alias": {
+      "v0.2": "0.2.x-dev"
+    }
+  }
 }
