@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Lsr\Core\Requests;
 
 use Lsr\Interfaces\ResponseFactoryInterface;
-use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\StreamInterface;
 use Symfony\Component\Serializer\Serializer;
 
@@ -14,6 +14,7 @@ final readonly class ResponseFactory implements ResponseFactoryInterface
 
 	public function __construct(
 		private Serializer $serializer,
+        private StreamFactoryInterface $streamFactory,
 	) {
 	}
 
@@ -53,13 +54,13 @@ final readonly class ResponseFactory implements ResponseFactoryInterface
 	 * @inheritDoc
 	 */
 	public function createStream(string $content): StreamInterface {
-		return new Psr17Factory()->createStream($content);
+        return $this->streamFactory->createStream($content);
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function createResourceStream($resource): StreamInterface {
-		return new Psr17Factory()->createStreamFromResource($resource);
+        return $this->streamFactory->createStreamFromResource($resource);
 	}
 }
