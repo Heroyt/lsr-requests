@@ -6,10 +6,10 @@ namespace Lsr\Core\Requests\DI;
 use Lsr\Core\Requests\RequestFactory;
 use Lsr\Core\Requests\ResponseFactory;
 use Lsr\Core\Requests\StreamFactory;
-use Lsr\Interfaces\RequestFactoryInterface;
-use Lsr\Interfaces\ResponseFactoryInterface;
 use Nette;
 use Nette\DI\CompilerExtension;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 
 /**
@@ -53,19 +53,16 @@ class RequestExtension extends CompilerExtension
         $builder = $this->getContainerBuilder();
 
         $streamFactory = $builder->addDefinition($this->prefix('streamFactory'))
-            ->setType(StreamFactoryInterface::class)
             ->setFactory($this->config->streamFactory)
             ->setAutowired()
             ->setTags(['lsr', 'request']);
 
         $requestFactory = $builder->addDefinition($this->prefix('requestFactory'))
-            ->setType(RequestFactoryInterface::class)
             ->setFactory($this->config->requestFactory)
             ->setAutowired()
             ->setTags(['lsr', 'request']);
 
         $responseFactory = $builder->addDefinition($this->prefix('responseFactory'))
-            ->setType(ResponseFactoryInterface::class)
             ->setFactory($this->config->responseFactory)
             ->setArgument('streamFactory', $streamFactory)
             ->setAutowired()
