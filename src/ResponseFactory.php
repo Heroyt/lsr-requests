@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace Lsr\Core\Requests;
 
-use Lsr\Interfaces\ResponseFactoryInterface;
+use Lsr\Interfaces\ResponseFactoryInterface as LsrResponseFactoryInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\StreamInterface;
 use Symfony\Component\Serializer\Serializer;
 
-final readonly class ResponseFactory implements ResponseFactoryInterface
+final readonly class ResponseFactory implements ResponseFactoryInterface, LsrResponseFactoryInterface
 {
 
 	public function __construct(
@@ -40,7 +41,7 @@ final readonly class ResponseFactory implements ResponseFactoryInterface
 	/**
 	 * @inheritDoc
 	 */
-	public function createResponse(
+    public function createFullResponse(
 		int                         $code = 200,
 		array                       $headers = [],
 		StreamInterface|string|null $body = null,
@@ -49,6 +50,14 @@ final readonly class ResponseFactory implements ResponseFactoryInterface
 	): ResponseInterface {
 		return Response::create($code, $headers, $body, $version, $reason);
 	}
+
+    public function createResponse(
+        int    $code = 200,
+        string $reasonPhrase = '',
+    ): ResponseInterface
+    {
+        return $this->createFullResponse($code, [], null, '1.1', $reasonPhrase);
+    }
 
 	/**
 	 * @inheritDoc

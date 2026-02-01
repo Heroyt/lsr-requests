@@ -6,7 +6,9 @@ use Lsr\Exceptions\DispatchBreakException;
 use Lsr\Interfaces\RequestFactoryInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Serializer;
 use function explode;
@@ -16,17 +18,18 @@ use function trim;
 final readonly class RequestFactory implements RequestFactoryInterface
 {
 
+    private Psr17Factory $psr17Factory;
 	private ServerRequestCreator $requestCreator;
 
 	public function __construct(
 		private Serializer $serializer,
 	) {
-		$psr17Factory = new Psr17Factory();
+        $this->psr17Factory = new Psr17Factory();
 		$this->requestCreator = new ServerRequestCreator(
-			$psr17Factory, // ServerRequestFactory
-			$psr17Factory, // UriFactory
-			$psr17Factory, // UploadedFileFactory
-			$psr17Factory // StreamFactory
+            $this->psr17Factory, // ServerRequestFactory
+            $this->psr17Factory, // UriFactory
+            $this->psr17Factory, // UploadedFileFactory
+            $this->psr17Factory // StreamFactory
 		);
 	}
 
@@ -57,4 +60,28 @@ final readonly class RequestFactory implements RequestFactoryInterface
 		return new Request($request);
 	}
 
+    /**
+     * @inheritDoc
+     * @param string $method
+     * @param UriInterface|string $uri
+     * @return RequestInterface
+     */
+    public function createRequest(string $method, $uri): RequestInterface
+    {
+        return $this->psr17Factory->createRequest($method, $uri);
+    }
+
+    /**
+     * @inheritDoc
+     * @param string $method
+     * @param UriInterface|string $uri
+     * @param array<string, mixed> $serverParams
+     * @return ServerRequestInterface
+     */
+    public function createServerRequest(string $method, $uri, array $serverParams = []): ServerRequestInterface
+    {
+        return $this->fromPsrRequest(
+            $this->psr17Factory->createServerRequest($method, $uri, $serverParams)
+        );
+    }
 }
