@@ -10,13 +10,13 @@ use Lsr\ObjectValidation\Validator;
 use Lsr\Serializer\Mapper;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 
-readonly class RequestValidationMapper
+class RequestValidationMapper
 {
 
 	public private(set) Request $request;
 
 	public function __construct(
-		private Mapper $denormalizer,
+        private readonly Mapper $denormalizer,
 	) {
 	}
 
